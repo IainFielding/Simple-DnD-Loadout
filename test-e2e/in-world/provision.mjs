@@ -1,0 +1,134 @@
+/**
+ * World fixtures, built inside Foundry: the player, the two characters and their gear.
+ *
+ * Every item is hand-built rather than pulled from a compendium, so the suites need no content
+ * pack and assert against items whose type, properties and rarity they chose. Idempotent, and
+ * `resetGear` puts both characters back to "nothing equipped, no slot flags" at the start of every
+ * run so no suite inherits another's state.
+ */
+
+const MODULE = "sogrom-simple-dnd5e-paper-doll";
+export const PREFIX = "[e2e]";
+export const HERO = `${PREFIX} Doll Hero`;
+export const STRANGER = `${PREFIX} Stranger`;
+
+/**
+ * The gear every character carries. `key` is how suites find an item; names are what a player sees.
+ * Icons are core Foundry icons so the classifier's icon rule is exercised with real paths.
+ */
+export const GEAR = [
+  { key: "longsword", name: "Longsword", type: "weapon", img: "icons/weapons/swords/sword-guard-steel-green.webp",
+    system: { type: { value: "martialM" }, properties: ["ver"] } },
+  { key: "dagger", name: "Dagger", type: "weapon", img: "icons/weapons/daggers/dagger-straight-blue.webp",
+    system: { type: { value: "simpleM" }, properties: ["fin", "lgt", "thr"] } },
+  { key: "greatsword", name: "Greatsword", type: "weapon", img: "icons/weapons/swords/greatsword-crossguard-steel.webp",
+    system: { type: { value: "martialM" }, properties: ["hvy", "two"] } },
+  { key: "shield", name: "Shield", type: "equipment", img: "icons/equipment/shield/heater-steel-worn.webp",
+    system: { type: { value: "shield" }, armor: { value: 2 } } },
+  { key: "chain", name: "Chain Mail", type: "equipment", img: "icons/equipment/chest/breastplate-banded-steel.webp",
+    system: { type: { value: "heavy" }, armor: { value: 16 } } },
+  { key: "leather", name: "Leather Armor", type: "equipment", img: "icons/equipment/chest/breastplate-layered-leather-brown.webp",
+    system: { type: { value: "light" }, armor: { value: 11 } } },
+  { key: "boots", name: "Boots of Speed", type: "equipment", img: "icons/equipment/feet/boots-leather-green.webp",
+    system: { type: { value: "wondrous" }, rarity: "rare", properties: ["mgc"], attunement: "required" } },
+  { key: "cloak", name: "Cloak of Protection", type: "equipment", img: "icons/equipment/back/cloak-heavy-fur-blue.webp",
+    system: { type: { value: "wondrous" }, rarity: "uncommon", properties: ["mgc"], attunement: "required" } },
+  { key: "ringProtection", name: "Ring of Protection", type: "equipment", img: "icons/equipment/finger/ring-band-gold.webp",
+    system: { type: { value: "ring" }, rarity: "rare", properties: ["mgc"], attunement: "required" } },
+  { key: "ringWarmth", name: "Ring of Warmth", type: "equipment", img: "icons/equipment/finger/ring-ball-gold.webp",
+    system: { type: { value: "ring" }, rarity: "uncommon", properties: ["mgc"], attunement: "required" } },
+  { key: "ringSwimming", name: "Ring of Swimming", type: "equipment", img: "icons/equipment/finger/ring-ball-leaves-green.webp",
+    system: { type: { value: "ring" }, rarity: "uncommon", properties: ["mgc"] } },
+  { key: "ioun", name: "Ioun Stone of Awareness", type: "equipment", img: "icons/commodities/gems/gem-rough-cushion-blue.webp",
+    system: { type: { value: "wondrous" }, rarity: "rare", properties: ["mgc"], attunement: "required" } },
+  { key: "potion", name: "Potion of Healing", type: "consumable", img: "icons/consumables/potions/bottle-round-corked-red.webp",
+    system: { type: { value: "potion" } } }
+];
+
+/**
+ * Create or refresh the world's fixtures.
+ * @param {{name: string, owns: string, observes: string}[]} players
+ * @returns {Promise<string[]>}  Log lines.
+ */
+export async function ensureWorld(players) {
+  const log = [];
+  const hero = await ensureCharacter(HERO);
+  const stranger = await ensureCharacter(STRANGER);
+  log.push(`characters: ${hero.name}, ${stranger.name}`);
+
+  for ( const spec of players ) {
+    let user = game.users.find(u => u.name === spec.name);
+    if ( !user ) user = await User.create({ name: spec.name, role: CONST.USER_ROLES.PLAYER });
+    const owned = game.actors.getName(spec.owns);
+    const observed = game.actors.getName(spec.observes);
+    if ( user.character?.id !== owned.id ) await user.update({ character: owned.id });
+    await owned.update({ [`ownership.${user.id}`]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER });
+    await observed.update({ [`ownership.${user.id}`]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER });
+    log.push(`user "${user.name}" owns ${owned.name}, observes ${observed.name}`);
+  }
+  return log;
+}
+
+async function ensureCharacter(name) {
+  let actor = game.actors.getName(name);
+  if ( !actor ) {
+    actor = await Actor.create({
+      name,
+      type: "character",
+      img: "icons/svg/mystery-man.svg",
+      system: { abilities: { str: { value: 16 } } }
+    });
+  }
+  await finishEmberCreation(actor);
+  await resetGear(actor);
+  return actor;
+}
+
+/**
+ * In an Ember world, a character created by anyone gets Ember's creation sheet
+ * (`flags.core.sheetClass`) until Ember's builder marks it finished (`flags.ember.characterCreation`)
+ * and hands it back to dnd5e's sheet. The fixtures stand for characters players are already
+ * playing, so they are marked finished exactly the way Ember does it.
+ * @param {Actor} actor
+ */
+async function finishEmberCreation(actor) {
+  if ( !game.modules.get("ember")?.active ) return;
+  if ( actor.getFlag("ember", "characterCreation") === true ) return;
+  await actor.update({ "flags.ember.characterCreation": true });
+  await actor.unsetFlag("core", "sheetClass");
+  actor._sheet = null;
+}
+
+/**
+ * Put a character back to a known state: exactly the fixture gear, nothing equipped or attuned,
+ * no slot or portrait flags.
+ * @param {Actor} actor
+ */
+export async function resetGear(actor) {
+  const wanted = new Set(GEAR.map(g => g.name));
+  const strays = actor.items.filter(i => !wanted.has(i.name)).map(i => i.id);
+  if ( strays.length ) await actor.deleteEmbeddedDocuments("Item", strays);
+
+  const toCreate = [];
+  const toUpdate = [];
+  for ( const spec of GEAR ) {
+    const existing = actor.items.getName(spec.name);
+    if ( !existing ) {
+      toCreate.push({ name: spec.name, type: spec.type, img: spec.img, system: { ...spec.system, equipped: false } });
+    } else if ( existing.system.equipped || existing.system.attuned ) {
+      toUpdate.push({ _id: existing.id, "system.equipped": false, "system.attuned": false });
+    }
+  }
+  if ( toCreate.length ) await actor.createEmbeddedDocuments("Item", toCreate);
+  if ( toUpdate.length ) await actor.updateEmbeddedDocuments("Item", toUpdate);
+  for ( const key of ["slots", "portrait"] ) {
+    if ( actor.getFlag(MODULE, key) !== undefined ) await actor.unsetFlag(MODULE, key);
+  }
+}
+
+/** Close every window the suites may have opened. */
+export async function closeAll() {
+  for ( const app of [...foundry.applications.instances.values()] ) {
+    if ( app.id?.startsWith?.(`${MODULE}-dock`) || (app.document instanceof Actor) ) await app.close({ animate: false });
+  }
+}

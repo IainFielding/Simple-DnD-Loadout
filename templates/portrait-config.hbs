@@ -1,0 +1,33 @@
+{{!-- Portrait settings for one character. See scripts/app/portrait-config.mjs. --}}
+<div class="pd-form-body">
+  <div class="form-group">
+    <label>{{localize "sogrom-simple-dnd5e-paper-doll.portrait.src"}}</label>
+    <div class="form-fields">
+      <file-picker name="{{names.src}}" type="image" value="{{src}}" placeholder="{{actorImg}}"></file-picker>
+    </div>
+    <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.portrait.srcHint"}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "sogrom-simple-dnd5e-paper-doll.portrait.fit"}}</label>
+    <div class="form-fields">
+      <select name="{{names.fit}}">
+        {{#each fitOptions}}
+        <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "sogrom-simple-dnd5e-paper-doll.portrait.focus"}}</label>
+    <div class="form-fields">
+      <range-picker name="{{names.focus}}" value="{{focus}}" min="0" max="100" step="1"></range-picker>
+    </div>
+    <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.portrait.focusHint"}}</p>
+  </div>
+
+  <figure class="pd-portrait-preview" aria-hidden="true">
+    <img src="{{preview.src}}" alt="" style="object-fit: {{preview.fit}}; object-position: 50% {{preview.focus}}%;">
+  </figure>
+</div>

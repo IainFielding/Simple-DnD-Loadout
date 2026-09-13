@@ -1,0 +1,73 @@
+import { describe, expect, it } from "vitest";
+import { canAttune, itemFacts, needsAttunement } from "../scripts/data/item-facts.mjs";
+import { source } from "./helpers/items.mjs";
+
+describe("itemFacts", () => {
+  it("snapshots a dnd5e item", () => {
+    const facts = itemFacts(source({
+      id: "abc", name: "Flame Tongue", type: "weapon", subtype: "martialM", properties: ["mgc", "ver"],
+      equipped: true, attuned: true, attunement: "required", rarity: "rare", sort: 5
+    }));
+    expect(facts).toMatchObject({
+      id: "abc", uuid: "Actor.hero.Item.abc", name: "Flame Tongue", type: "weapon", subtype: "martialM",
+      properties: ["mgc", "ver"], equipped: true, attuned: true, attunement: "required", rarity: "rare",
+      sort: 5, slottable: true, twoHanded: false, identified: true, slotOverride: null
+    });
+  });
+
+  it("reads properties from a Set or an array", () => {
+    const asArray = source({ name: "Maul", type: "weapon", properties: [] });
+    asArray.system.properties = ["two", "hvy"];
+    expect(itemFacts(asArray).twoHanded).toBe(true);
+  });
+
+  it("marks two-handed only for weapons", () => {
+    expect(itemFacts(source({ name: "Greatsword", type: "weapon", properties: ["two"] })).twoHanded).toBe(true);
+    expect(itemFacts(source({ name: "Odd Shield", subtype: "shield", properties: ["two"] })).twoHanded).toBe(false);
+  });
+
+  it("decides slottable by type, and for consumables by subtype", () => {
+    expect(itemFacts(source({ name: "x", type: "equipment" })).slottable).toBe(true);
+    expect(itemFacts(source({ name: "x", type: "consumable", subtype: "wand" })).slottable).toBe(true);
+    expect(itemFacts(source({ name: "x", type: "consumable", subtype: "potion" })).slottable).toBe(false);
+    expect(itemFacts(source({ name: "x", type: "tool" })).slottable).toBe(false);
+    expect(itemFacts(source({ name: "x", type: "loot" })).slottable).toBe(false);
+  });
+
+  it("requires the system to model equipping at all", () => {
+    const item = source({ name: "Homebrew", type: "equipment" });
+    delete item.system.equipped;
+    expect(itemFacts(item).slottable).toBe(false);
+  });
+
+  it("survives an item with almost no data", () => {
+    const facts = itemFacts({ name: "Broken" });
+    expect(facts).toMatchObject({ id: "", name: "Broken", type: "", slottable: false, equipped: false });
+    expect(itemFacts(null).slottable).toBe(false);
+  });
+
+  it("reads a pinned slot from the module flag", () => {
+    expect(itemFacts(source({ name: "Odd Boots", slot: "trinket" })).slotOverride).toBe("trinket");
+  });
+
+  it("treats only an explicit identified:false as unidentified", () => {
+    const item = source({ name: "Mystery" });
+    expect(itemFacts(item).identified).toBe(true);
+    item.system.identified = false;
+    expect(itemFacts(item).identified).toBe(false);
+  });
+});
+
+describe("attunement helpers", () => {
+  it("canAttune for required and optional", () => {
+    expect(canAttune({ attunement: "required" })).toBe(true);
+    expect(canAttune({ attunement: "optional" })).toBe(true);
+    expect(canAttune({ attunement: "" })).toBe(false);
+  });
+
+  it("needsAttunement only when required and not attuned", () => {
+    expect(needsAttunement({ attunement: "required", attuned: false })).toBe(true);
+    expect(needsAttunement({ attunement: "required", attuned: true })).toBe(false);
+    expect(needsAttunement({ attunement: "optional", attuned: false })).toBe(false);
+  });
+});

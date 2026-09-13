@@ -1,0 +1,35 @@
+{{!--
+  The click-to-choose drawer for one slot, rendered on demand by
+  scripts/doll/controller.mjs#openPicker into the doll's .pd-picker-host.
+--}}
+<div class="pd-picker" role="dialog" aria-label="{{label}}" data-pd-picker="{{key}}">
+  <header class="pd-picker-head">
+    <img class="pd-picker-icon" src="{{placeholder}}" alt="" draggable="false">
+    <h3 class="pd-picker-title">{{label}}</h3>
+    <button type="button" class="pd-icon-button" data-pd-action="close-picker"
+            aria-label="{{localize "sogrom-simple-dnd5e-paper-doll.picker.close"}}">
+      <i class="fa-solid fa-xmark" inert></i>
+    </button>
+  </header>
+
+  {{#if candidates.length}}
+  <input type="search" class="pd-picker-search" placeholder="{{searchLabel}}" aria-label="{{searchLabel}}"
+         autocomplete="off" spellcheck="false">
+  <ul class="pd-picker-list">
+    {{#each candidates}}
+    <li data-pd-name="{{searchName}}">
+      <button type="button" class="pd-picker-item rarity-{{rarity}} {{#if wornIn}}is-worn{{/if}}" data-pd-choose="{{id}}"
+              data-tooltip="{{tooltip}}" data-tooltip-class="{{tooltipClass}}" data-tooltip-direction="LEFT">
+        <img src="{{img}}" alt="" draggable="false">
+        <span class="pd-picker-name">{{name}}</span>
+        {{#if wornIn}}<span class="pd-picker-meta">{{wornIn}}</span>{{/if}}
+        {{#if canAttune}}<i class="pd-picker-attune fa-{{#if attuned}}solid{{else}}regular{{/if}} fa-sun" inert></i>{{/if}}
+      </button>
+    </li>
+    {{/each}}
+  </ul>
+  <p class="pd-picker-empty" hidden>{{localize "sogrom-simple-dnd5e-paper-doll.picker.noMatch"}}</p>
+  {{else}}
+  <p class="pd-picker-empty">{{noneLabel}}</p>
+  {{/if}}
+</div>

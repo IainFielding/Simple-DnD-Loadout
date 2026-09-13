@@ -1,0 +1,144 @@
+{
+  "sogrom-simple-dnd5e-paper-doll": {
+    "title": "Paper Doll",
+    "slot": {
+      "kind": {
+        "head": "Head",
+        "neck": "Neck",
+        "back": "Back",
+        "body": "Body",
+        "wrists": "Wrists",
+        "hands": "Hands",
+        "waist": "Waist",
+        "feet": "Feet",
+        "ring": "Ring",
+        "mainHand": "Main Hand",
+        "offHand": "Off Hand",
+        "trinket": "Trinket"
+      },
+      "numbered": "{label} {index}",
+      "empty": "{label}: empty. Click to choose an item, or drop one here.",
+      "emptyReadonly": "{label}: empty",
+      "filled": "{label}: {item}",
+      "blocked": "Off Hand: gripping {weapon} (two-handed)",
+      "conflict": "{item} is in the off hand while {weapon} needs both hands",
+      "inert": "Requires attunement",
+      "attuned": "Attuned"
+    },
+    "reject": {
+      "notSlottable": "{item} can't be worn or held.",
+      "wrongSlot": "{item} doesn't fit the {slot} slot.",
+      "twoHandedOffHand": "{item} needs both hands. Put it in the Main Hand.",
+      "offHandBlocked": "Both hands are gripping {weapon}. Unequip it first.",
+      "unknownSlot": "That slot no longer exists.",
+      "emptySlot": "That slot is already empty.",
+      "notOwner": "You don't have permission to change {actor}'s equipment.",
+      "foreign": "Only items {actor} already carries can be equipped here.",
+      "vetoed": "Another module refused that change."
+    },
+    "menu": {
+      "view": "View Item",
+      "use": "Use",
+      "attune": "Attune",
+      "unattune": "End Attunement",
+      "swap": "Choose Another…",
+      "unequip": "Unequip"
+    },
+    "picker": {
+      "search": "Search {actor}'s gear…",
+      "none": "Nothing {actor} carries fits here.",
+      "noMatch": "No items match that search.",
+      "wornIn": "Worn: {slot}",
+      "close": "Close"
+    },
+    "stats": {
+      "ac": "Armor Class",
+      "attunement": "Attunement",
+      "attunementValue": "{used} of {max} attuned",
+      "attunementOver": "Attuned to more items than allowed",
+      "encumbrance": "Carried weight",
+      "encumbranceValue": "{value} / {max}"
+    },
+    "unslotted": {
+      "title": "Also Worn",
+      "hint": "Equipped, but no free slot fits. Free one up, or drag it onto a slot."
+    },
+    "notify": {
+      "attuneOver": "{actor} is now attuned to {used} items (limit {max}).",
+      "created": "{item} added to {actor}'s inventory."
+    },
+    "dock": {
+      "toggle": "Paper Doll",
+      "title": "{actor}: Paper Doll"
+    },
+    "portrait": {
+      "title": "Paper Doll Portrait: {actor}",
+      "configure": "Portrait…",
+      "src": "Image",
+      "srcHint": "Leave blank to use the character's own portrait. A full-body picture looks best.",
+      "fit": "Fit",
+      "fitCover": "Fill the frame",
+      "fitContain": "Show the whole image",
+      "focus": "Vertical focus",
+      "focusHint": "Which part of a tall picture to keep in view when it fills the frame.",
+      "save": "Save",
+      "reset": "Use Character Portrait"
+    },
+    "slotConfig": {
+      "title": "Paper Doll Slots",
+      "intro": "Choose which slots every character's paper doll shows. Items already worn in a slot you turn off stay equipped and appear under Also Worn.",
+      "rings": "Ring slots",
+      "trinkets": "Trinket slots",
+      "trinketsHint": "Catch-all slots for worn magic items with no better home: ioun stones, figurines, gems.",
+      "optional": "Optional slots",
+      "save": "Save",
+      "reset": "Restore Defaults"
+    },
+    "settings": {
+      "sheetTab": {
+        "name": "Paper Doll Tab",
+        "hint": "Add a Paper Doll tab to the D&D 5e character sheet. Reloads the world when changed."
+      },
+      "dockButton": {
+        "name": "Docked Paper Doll Button",
+        "hint": "Add a Paper Doll button to character sheet headers that opens the doll in its own window, docked beside the sheet."
+      },
+      "dockSide": {
+        "name": "Dock Side",
+        "hint": "Which side of the sheet the docked paper doll prefers. If there isn't room, it uses the other side.",
+        "left": "Left",
+        "right": "Right"
+      },
+      "autoDock": {
+        "name": "Open Docked Doll With Sheets",
+        "hint": "Open the docked paper doll automatically whenever you open a character sheet."
+      },
+      "strictSlots": {
+        "name": "Strict Slot Matching",
+        "hint": "When on, worn accessories only fit the slot they belong in: boots on feet, cloaks on the back. When off, any accessory fits any accessory slot. Armor, shields, weapons and rings follow the rules either way."
+      },
+      "foreignDrops": {
+        "name": "Dropping New Items",
+        "hint": "Who may drop an item the character doesn't already carry (from a compendium or the Items sidebar) onto the paper doll. The item is added to the character's inventory and equipped.",
+        "gm": "Gamemaster only",
+        "owner": "Anyone who owns the character",
+        "none": "Nobody"
+      },
+      "slotLayoutMenu": {
+        "name": "Paper Doll Slots",
+        "label": "Configure Slots",
+        "hint": "How many ring and trinket slots every character has, and which optional slots are shown."
+      },
+      "debugLogging": {
+        "name": "Debug Logging",
+        "hint": "Print Paper Doll diagnostics to your browser console. Only affects you."
+      }
+    },
+    "keybindings": {
+      "toggleDock": {
+        "name": "Toggle Docked Paper Doll",
+        "hint": "Open or close the docked paper doll for your selected token's character, or your assigned character."
+      }
+    }
+  }
+}

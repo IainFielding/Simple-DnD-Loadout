@@ -1,0 +1,31 @@
+{{!-- GM slot layout. See scripts/app/slot-config.mjs. --}}
+<div class="pd-form-body">
+  <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.intro"}}</p>
+
+  <div class="form-group">
+    <label>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.rings"}}</label>
+    <div class="form-fields">
+      <range-picker name="rings" value="{{rings}}" min="1" max="{{maxRings}}" step="1"></range-picker>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.trinkets"}}</label>
+    <div class="form-fields">
+      <range-picker name="trinkets" value="{{trinkets}}" min="0" max="{{maxTrinkets}}" step="1"></range-picker>
+    </div>
+    <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.trinketsHint"}}</p>
+  </div>
+
+  <fieldset>
+    <legend>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.optional"}}</legend>
+    <div class="pd-kind-grid">
+      {{#each optional}}
+      <label class="checkbox">
+        <input type="checkbox" name="enabled.{{kind}}" {{#if enabled}}checked{{/if}}>
+        {{label}}
+      </label>
+      {{/each}}
+    </div>
+  </fieldset>
+</div>

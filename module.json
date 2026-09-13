@@ -1,0 +1,52 @@
+{
+  "id": "sogrom-simple-dnd5e-paper-doll",
+  "title": "Simple D&D Paper Doll",
+  "description": "Dress your D&D 5e character the way an RPG should let you: drag armour, weapons, rings and wondrous items onto a paper doll of your character, right on the character sheet or docked beside it. Knows boots from cloaks, two-handed from one, and what needs attunement.",
+  "version": "#{VERSION}#",
+  "compatibility": {
+    "minimum": "14.359",
+    "maximum": "14.999",
+    "verified": "14.367"
+  },
+  "authors": [
+    {
+      "name": "Iain Fielding",
+      "url": "https://iainfielding.com",
+      "discord": "Sogrom"
+    }
+  ],
+  "relationships": {
+    "conflicts": [],
+    "optional": [],
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0.0",
+          "maximum": "6.99.99",
+          "verified": "6.0.1"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/main.mjs"
+  ],
+  "styles": [
+    "styles/fonts.css",
+    "styles/doll.css",
+    "styles/ember-skin.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "url": "#{URL}#",
+  "manifest": "#{MANIFEST}#",
+  "download": "#{DOWNLOAD}#",
+  "license": "LICENSE"
+}
