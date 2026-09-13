@@ -115,7 +115,7 @@ function dropOn(slot, payload) {
 export async function all() {
   const mod = await load();
   const results = {};
-  const suites = { tabSuite, equipSuite, domSuite, dockSuite, apiSuite, settingsSuite };
+  const suites = { tabSuite, equipSuite, domSuite, dockSuite, apiSuite, settingsSuite, configSuite };
   for ( const [name, suite] of Object.entries(suites) ) {
     const report = new Report();
     const hero = game.actors.getName(HERO);
@@ -418,4 +418,41 @@ async function settingsSuite(report, mod, hero) {
   }
   const stranger = game.actors.getName(STRANGER);
   report.check("the stranger exists for the player suite", !!stranger);
+}
+
+/** The two small windows: they render, and what they save is what the doll then reads. */
+async function configSuite(report, mod, hero) {
+  const { SlotConfigApp } = await import(`${BASE}/app/slot-config.mjs`);
+  const { PortraitConfig } = await import(`${BASE}/app/portrait-config.mjs`);
+  const before = game.settings.get(MODULE, "slotLayout");
+
+  // Configure Slots.
+  const slots = new SlotConfigApp();
+  await slots.render({ force: true });
+  await waitFor(() => slots.rendered && slots.element.querySelector("range-picker[name=rings]"), "the slot config form");
+  report.equal("the slot form offers every optional accessory slot", slots.element.querySelectorAll('input[name^="enabled."]').length, 7);
+  try {
+    slots.element.querySelector("range-picker[name=rings]").value = 3;
+    slots.element.querySelector("range-picker[name=trinkets]").value = 2;
+    slots.element.querySelector('input[name="enabled.waist"]').checked = false;
+    await slots.submit();
+    report.equal("submitting saves the layout", game.settings.get(MODULE, "slotLayout"), { rings: 3, trinkets: 2, disabled: ["waist"] });
+    report.equal("…which the doll reads", mod.context.readLayout(hero).layout.cells.filter(c => c.kind === "ring").length, 3);
+  } finally {
+    await game.settings.set(MODULE, "slotLayout", before);
+    await slots.close();
+  }
+
+  // Portrait.
+  const portrait = new PortraitConfig({ document: hero });
+  await portrait.render({ force: true });
+  await waitFor(() => portrait.rendered && portrait.element.querySelector("file-picker"), "the portrait form");
+  report.check("the portrait form has a live preview", !!portrait.element.querySelector(".pd-portrait-preview img"));
+  portrait.element.querySelector("file-picker").value = "icons/svg/cowled.svg";
+  portrait.element.querySelector("select").value = "contain";
+  portrait.element.querySelector("range-picker").value = 40;
+  await portrait.submit();
+  await waitFor(() => hero.getFlag(MODULE, "portrait")?.src, "the portrait flag");
+  report.equal("submitting saves the portrait", mod.context.portraitFor(hero), { src: "icons/svg/cowled.svg", fit: "contain", focus: 40, placeholder: true });
+  await hero.unsetFlag(MODULE, "portrait");
 }

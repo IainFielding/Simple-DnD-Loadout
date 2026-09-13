@@ -49,8 +49,8 @@ asserts on that image; it's there for someone to look at.
 
 | World | Modules | Status |
 | --- | --- | --- |
-| `paperdoll` | the module only | 88 assertions, green (2026-09-13) |
-| `paperdoll-ember` | the module and Ember | 98 assertions, green (2026-09-13) |
+| `paperdoll` | the module only | 93 assertions, green (2026-09-13) |
+| `paperdoll-ember` | the module and Ember | 103 assertions, green (2026-09-13) |
 | `paperdoll-tidy` | the module and Tidy 5e Sheet | Blocked. Tidy 13.8.5 declares dnd5e ≤ 5.3.x and doesn't activate on 6.0.1. |
 
 All the gear is hand-built by `in-world/provision.mjs`, so no content pack is needed. At the start of
@@ -64,6 +64,6 @@ they use dnd5e's sheet.
 | --- | --- | --- |
 | `run.mjs`, `provision.mjs`, `lib/` | Node | Starts Foundry, joins with Playwright, prints reports |
 | `in-world/provision.mjs` | the page | Fixtures: the player, `[e2e] Doll Hero`, `[e2e] Stranger`, and the gear |
-| `in-world/harness.mjs` | GM page | Tab, equip, DOM, dock, API and settings suites |
+| `in-world/harness.mjs` | GM page | Tab, equip, DOM, dock, API, settings and config-window suites |
 | `in-world/player.mjs` | player page | Permissions |
 | `in-world/render.mjs` | GM page | The showcase screenshot, and the Ember and Tidy suites |
