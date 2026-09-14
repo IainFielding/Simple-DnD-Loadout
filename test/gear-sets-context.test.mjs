@@ -178,6 +178,21 @@ describe("saved sets through the write path", () => {
     expect(ui.notifications.shown[0].message).toContain("Shield");
   });
 
+  it("finds a deleted and re-added item by name, and stores its new id in the set", async () => {
+    const actor = kit();
+    await saveSet(actor, "Battle");
+    const oldShield = itemNamed(actor, "Shield");
+    actor.items.delete(oldShield.id);
+    const [newShield] = await actor.createEmbeddedDocuments("Item", [{ name: "Shield", type: "equipment", system: { type: { value: "shield" } } }]);
+    ui.notifications.shown.length = 0;
+    expect(await applySet(actor, "Battle")).toBe(true);
+    expect(newShield.system.equipped).toBe(true);
+    expect(ui.notifications.shown).toEqual([]);
+    const [stored] = readSets(actor);
+    expect(stored.slots.offHand).toBe(newShield.id);
+    expect(buildLoadoutContext(actor, { editable: true }).sets.current).toBe("Battle");
+  });
+
   it("preApplySet can refuse before anything is written", async () => {
     const actor = kit();
     await saveSet(actor, "Battle");

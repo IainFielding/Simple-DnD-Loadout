@@ -90,32 +90,68 @@ function onClick(event, ctx) {
   if ( (action === "sets") && ctx.editable ) return openSets(ctx);
 
   const chip = event.target.closest("[data-lo-unslotted]");
-  if ( chip ) return activateItem(ctx, ctx.actor.items.get(chip.dataset.loUnslotted), event);
+  if ( chip ) return activateItem(ctx, ctx.actor.items.get(chip.dataset.loUnslotted), event, { target: chip });
 
   const slot = event.target.closest(".lo-slot");
   if ( !slot || slot.closest(".lo-picker") ) return;
   const item = ctx.actor.items.get(slot.dataset.loItem ?? "");
   // Packed camp clothes are not worn, so there is nothing to use: they always open.
-  if ( item ) return activateItem(ctx, item, event, { packed: slot.dataset.loGroup === "camp" });
+  if ( item ) return activateItem(ctx, item, event, { packed: slot.dataset.loGroup === "camp", target: slot });
   if ( ctx.editable && !slot.classList.contains("is-blocked") ) openPicker(ctx, slot.dataset.loSlot);
 }
 
 /**
- * Left-click on a worn item. As on the sheet's own inventory: in play mode it is used, in edit mode
- * (or on a sheet with no modes) it opens. Someone who cannot use the character's items, and a packed
- * item, always get the item's sheet. Swapping and unequipping stay on the right-click menu in both
- * modes.
+ * Left-click on a worn item, following the sheet's mode:
+ *
+ * - **edit**: the slot's menu opens — swap, unequip, attune — as a right-click would.
+ * - **play**: an item with something to do (an attack, a wand's spell, lighting a torch) is used. An
+ *   item with nothing to do opens instead, rather than posting a card to chat for a pair of boots.
+ * - a sheet with no modes, someone who can only look, or a packed camp item: the item opens.
+ *
+ * The right-click menu is the same in every mode.
  * @param {object} ctx
  * @param {Item} item
- * @param {Event} event
+ * @param {MouseEvent} event
  * @param {object} [options]
- * @param {boolean} [options.packed]
+ * @param {boolean} [options.packed]     In a camp slot: packed, not worn.
+ * @param {HTMLElement} [options.target]  The slot or chip clicked, for the menu.
  */
-function activateItem(ctx, item, event, { packed = false } = {}) {
+function activateItem(ctx, item, event, { packed = false, target = null } = {}) {
   if ( !item ) return;
-  const play = ctx.mode?.() === "play";
-  if ( play && !packed && ctx.actor.isOwner ) return item.use({ event });
+  const mode = ctx.mode?.() ?? null;
+  if ( (mode === "edit") && ctx.editable && target ) return openMenuAt(target, event);
+  if ( (mode === "play") && !packed && ctx.actor.isOwner && hasSomethingToDo(item) ) return item.use({ event });
   return item.sheet?.render(true);
+}
+
+/**
+ * Whether using an item does anything: it has an activity the user can use. dnd5e's `Item#use` on an
+ * item without one only posts its description to chat.
+ * @param {Item} item
+ * @returns {boolean}
+ */
+export function hasSomethingToDo(item) {
+  return Array.from(item?.system?.activities ?? []).some(activity => activity?.canUse !== false);
+}
+
+/**
+ * Open the loadout's context menu on an element, where it was clicked — or, from the keyboard, over its
+ * middle. Foundry's ContextMenu opens on a `contextmenu` event, so that is what is sent; the click is
+ * stopped first so it cannot bubble on to the listener that closes menus on any click.
+ * @param {HTMLElement} target
+ * @param {MouseEvent} event
+ */
+function openMenuAt(target, event) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  const rect = target.getBoundingClientRect();
+  const fromPointer = event && (event.detail > 0);
+  target.dispatchEvent(new MouseEvent("contextmenu", {
+    bubbles: true,
+    cancelable: true,
+    clientX: fromPointer ? event.clientX : rect.left + (rect.width / 2),
+    clientY: fromPointer ? event.clientY : rect.top + (rect.height / 2)
+  }));
 }
 
 function onKeyDown(event, ctx) {
@@ -152,7 +188,7 @@ function createContextMenu(ctx) {
     {
       label: `${MODULE_ID}.menu.use`,
       icon: "<i class=\"fa-solid fa-dice-d20\"></i>",
-      visible: target => ctx.actor.isOwner && !!itemOf(target)?.system.activities?.size,
+      visible: target => ctx.actor.isOwner && hasSomethingToDo(itemOf(target)),
       onClick: (event, target) => itemOf(target)?.use({ event })
     },
     {

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { buildSlots } from "../scripts/data/slots.mjs";
 import { resolveLayout } from "../scripts/data/layout.mjs";
 import {
-  MAX_SETS, captureSet, cleanSetName, findSet, matchingSet, normaliseSets, planApplySet, upsertSet
+  MAX_SETS, captureSet, cleanSetName, findSet, matchingSet, normaliseSets, planApplySet, relinkSet, upsertSet
 } from "../scripts/data/sets.mjs";
 import {
-  boots, chainMail, cloak, greatsword, leather, longbow, longsword, ring, shield, softShoes
+  boots, chainMail, cloak, greatsword, leather, longbow, longsword, make, ring, shield, softShoes
 } from "./helpers/items.mjs";
 
 /** A layout from items and assignments, like readLayout without Foundry. */
@@ -32,7 +32,7 @@ describe("normaliseSets", () => {
       null,
       { name: "No id" }
     ]);
-    expect(sets).toEqual([{ id: "a", name: "Battle", slots: { body: "armour" }, alsoWorn: ["x"], names: {} }]);
+    expect(sets).toEqual([{ id: "a", name: "Battle", slots: { body: "armour" }, alsoWorn: ["x"], names: {}, sources: {} }]);
     expect(normaliseSets("nonsense")).toEqual([]);
   });
 });
@@ -139,6 +139,53 @@ describe("planApplySet", () => {
     const extra = ring("Ring C");
     const set = { id: "s", name: "Rings", slots: {}, alsoWorn: [extra.id], names: {} };
     expect(planApplySet(layoutOf([extra]), [extra], set).equip).toEqual([extra.id]);
+  });
+
+  it("finds a re-created item again by its real name and type, and reports the new id", () => {
+    const oldMail = chainMail();
+    const oldSword = longsword();
+    const layout0 = layoutOf([wearing(oldMail), wearing(oldSword)]);
+    const set = captureSet(layout0, { id: "s", name: "Battle" });
+    expect(set.sources[oldMail.id]).toEqual({ name: "Chain Mail", type: "equipment" });
+
+    // Both deleted and added back: new ids, same items. A leather armour with the wrong name is ignored.
+    const newMail = chainMail();
+    const newSword = longsword();
+    const items = [newMail, newSword, leather()];
+    const plan = planApplySet(layoutOf(items), items, set);
+    expect(plan.assignments).toMatchObject({ body: newMail.id, mainHand: newSword.id });
+    expect(plan.relinked).toEqual({ [oldMail.id]: newMail.id, [oldSword.id]: newSword.id });
+    expect(plan.missing).toEqual([]);
+    expect(plan.equip.sort()).toEqual([newMail.id, newSword.id].sort());
+  });
+
+  it("matches by type as well as name, and never takes the same item twice", () => {
+    const daggerA = make({ name: "Dagger", type: "weapon", subtype: "simpleM", properties: ["lgt"] });
+    const daggerB = make({ name: "Dagger", type: "weapon", subtype: "simpleM", properties: ["lgt"] });
+    const set = captureSet(layoutOf([wearing(daggerA), wearing(daggerB)]), { id: "s", name: "Twin daggers" });
+    // One dagger re-created; an equipment item that happens to be called "Dagger" is not a dagger.
+    const newDagger = make({ name: "Dagger", type: "weapon", subtype: "simpleM", properties: ["lgt"] });
+    const impostor = make({ name: "Dagger", subtype: "trinket" });
+    const items = [newDagger, impostor];
+    const plan = planApplySet(layoutOf(items), items, set);
+    expect(Object.values(plan.relinked)).toEqual([newDagger.id]);
+    expect(plan.missing).toEqual(["Dagger"]);
+  });
+
+  it("finds an unidentified item by its real name", () => {
+    const cloakFacts = cloak();
+    const set = captureSet(layoutOf([wearing(cloakFacts)]), { id: "s", name: "Hidden" });
+    const again = make({ name: "Strange Garment", realName: "Cloak of Protection", subtype: "wondrous",
+      img: "icons/equipment/back/cloak-heavy-fur-blue.webp", system: { identified: false } });
+    const plan = planApplySet(layoutOf([again]), [again], set);
+    expect(plan.relinked).toEqual({ [cloakFacts.id]: again.id });
+  });
+
+  it("relinkSet rewrites every reference to a replaced id", () => {
+    const set = { id: "s", name: "x", slots: { body: "old" }, alsoWorn: ["old2"], names: { old: "A", old2: "B" },
+      sources: { old: { name: "A", type: "equipment" } } };
+    expect(relinkSet(set, { old: "new", old2: "new2" })).toEqual({ id: "s", name: "x", slots: { body: "new" },
+      alsoWorn: ["new2"], names: { new: "A", new2: "B" }, sources: { new: { name: "A", type: "equipment" } } });
   });
 
   it("packs camp clothes rather than wearing them", () => {

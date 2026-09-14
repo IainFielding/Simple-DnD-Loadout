@@ -116,7 +116,8 @@ export async function all() {
   const mod = await load();
   const results = {};
   const suites = {
-    tabSuite, equipSuite, kitSuite, campSuite, barSuite, domSuite, clickSuite, gearSuite, setsSuite, dockSuite, apiSuite, settingsSuite,
+    tabSuite, equipSuite, kitSuite, campSuite, barSuite, domSuite, clickSuite, gearSuite, setsSuite, dockSuite,
+    otherSheetSuite, apiSuite, settingsSuite,
     configSuite
   };
   for ( const [name, suite] of Object.entries(suites) ) {
@@ -519,72 +520,160 @@ async function domSuite(report, mod, hero) {
 }
 
 /**
- * Left-click follows the sheet's mode: in play mode a worn item is used, in edit mode it opens. The
- * right-click menu keeps unequip and swap in both, and the dock follows the sheet it is docked to.
+ * Left-click follows the sheet's mode. In play mode an item with something to do is used and one with
+ * nothing to do opens; in edit mode the slot's menu opens. The right-click menu is the same in both,
+ * and the dock follows the sheet it is docked to.
  */
 async function clickSuite(report, mod, hero) {
   const api = game.modules.get(MODULE).api;
   const boots = gear(hero, "boots");
+  const sword = gear(hero, "longsword");
   await api.equip(hero, boots, "feet");
+  await api.equip(hero, sword, "mainHand");
   const { sheet, root } = await openTab(hero);
   const { MODES } = sheet.constructor;
-  let used = 0;
-  // Counted on the instance rather than really used, so no chat card or dialog gets in the way.
-  boots.use = async () => { used++; };
-  const filledFeet = element => element?.querySelector('.lo-slot[data-lo-slot="feet"].is-filled');
+  const used = { boots: 0, sword: 0 };
+  // Counted on the instances rather than really used, so no chat card or dialog gets in the way.
+  boots.use = async () => { used.boots++; };
+  sword.use = async () => { used.sword++; };
+  const filled = (element, key) => element?.querySelector(`.lo-slot[data-lo-slot="${key}"].is-filled`);
   const portraitShown = element => {
     const button = element?.querySelector("[data-lo-action='portrait']");
     return !!button && (getComputedStyle(button).display !== "none");
   };
+  const menuLabels = async label => {
+    const menu = await waitFor(() => document.querySelector("#context-menu"), label);
+    const labels = [...menu.querySelectorAll(".context-item")].map(li => li.textContent.trim());
+    menu.remove();
+    return labels;
+  };
   try {
+    report.check("a new weapon has something to do", mod.controller.hasSomethingToDo(sword), sword.system.activities?.size);
+    report.check("boots have nothing to do", !mod.controller.hasSomethingToDo(boots));
+
     await sheet.render({ mode: MODES.PLAY });
-    await waitFor(() => !sheet.isEditMode && filledFeet(root()), "the sheet in play mode");
-    filledFeet(root()).click();
-    await waitFor(() => used === 1, "the boots to be used");
-    report.check("in play mode, clicking a worn item uses it", used === 1);
-    report.check("…and doesn't open it", !boots.sheet.rendered);
+    await waitFor(() => !sheet.isEditMode && filled(root(), "mainHand") && filled(root(), "feet"), "the sheet in play mode");
+    filled(root(), "mainHand").click();
+    await waitFor(() => used.sword === 1, "the sword to be used");
+    report.check("in play mode, clicking a weapon uses it", !sword.sheet.rendered);
+    filled(root(), "feet").click();
+    await waitFor(() => boots.sheet.rendered, "the boots to open");
+    report.check("in play mode, clicking boots opens them rather than posting a card", used.boots === 0);
+    await boots.sheet.close();
     report.check("in play mode the portrait button is hidden", !portraitShown(root()));
 
-    filledFeet(root()).dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
-    const menu = await waitFor(() => document.querySelector("#context-menu"), "the slot menu in play mode");
-    const labels = [...menu.querySelectorAll(".context-item")].map(li => li.textContent.trim());
+    filled(root(), "feet").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    const playMenu = await menuLabels("the slot menu in play mode");
     report.check("the right-click menu still offers Unequip and Choose Another in play mode",
-      labels.includes("Unequip") && labels.some(l => l.startsWith("Choose Another")), labels.join(" | "));
-    menu.remove();
+      playMenu.includes("Unequip") && playMenu.some(l => l.startsWith("Choose Another")), playMenu.join(" | "));
 
     await sheet.render({ mode: MODES.EDIT });
-    await waitFor(() => sheet.isEditMode && filledFeet(root()), "the sheet in edit mode");
-    filledFeet(root()).click();
-    await waitFor(() => boots.sheet.rendered, "the boots' sheet to open");
-    report.check("in edit mode, clicking a worn item opens it", used === 1);
+    await waitFor(() => sheet.isEditMode && filled(root(), "mainHand"), "the sheet in edit mode");
+    filled(root(), "mainHand").click();
+    const editMenu = await menuLabels("the slot menu from a click in edit mode");
+    report.check("in edit mode, clicking a worn item opens its menu", editMenu.includes("Unequip") && editMenu.some(l => l.startsWith("Choose Another")), editMenu.join(" | "));
+    report.check("…without using or opening it", (used.sword === 1) && !sword.sheet.rendered);
     report.check("in edit mode the portrait button is available", portraitShown(root()));
-    await boots.sheet.close();
 
     const dock = await mod.dock.LoadoutDock.open(sheet);
-    (await waitFor(() => filledFeet(dock.element), "the boots in the dock")).click();
-    await waitFor(() => boots.sheet.rendered, "the boots' sheet from the dock");
-    report.check("the dock opens the item while its sheet is in edit mode", used === 1);
+    (await waitFor(() => filled(dock.element, "mainHand"), "the sword in the dock")).click();
+    const dockMenu = await menuLabels("the menu from the dock in edit mode");
+    report.check("the dock opens the menu while its sheet is in edit mode", dockMenu.includes("Unequip") && (used.sword === 1), dockMenu.join(" | "));
     report.check("…and shows the portrait button", portraitShown(dock.element));
-    await boots.sheet.close();
     await sheet.render({ mode: MODES.PLAY });
-    await waitFor(() => !sheet.isEditMode && filledFeet(dock.element) && !portraitShown(dock.element), "play mode with the dock open");
-    filledFeet(dock.element).click();
-    await waitFor(() => used === 2, "the boots to be used from the dock");
-    report.check("…and uses it once the sheet is back in play mode", used === 2);
+    await waitFor(() => !sheet.isEditMode && filled(dock.element, "mainHand") && !portraitShown(dock.element), "play mode with the dock open");
+    filled(dock.element, "mainHand").click();
+    await waitFor(() => used.sword === 2, "the sword to be used from the dock");
+    report.check("…and uses the weapon once the sheet is back in play mode", used.sword === 2);
     report.check("…and hides the portrait button without being redrawn", !portraitShown(dock.element));
     await dock.close();
 
-    await sheet.render({ mode: MODES.PLAY });
     await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="head"].is-empty'), "an empty head slot");
     root().querySelector('.lo-slot[data-lo-slot="head"]').click();
     report.check("in play mode an empty slot still opens the picker",
       !!(await waitFor(() => root()?.querySelector(".lo-picker"), "the head picker in play mode")));
   } finally {
     delete boots.use;
-    if ( boots.sheet.rendered ) await boots.sheet.close();
+    delete sword.use;
+    for ( const item of [boots, sword] ) if ( item.sheet.rendered ) await item.sheet.close();
+    document.querySelector("#context-menu")?.remove();
     await sheet.render({ mode: MODES.PLAY });
     await sheet.close();
   }
+}
+
+/**
+ * The docked loadout beside a character sheet this module has no code for: a bare ActorSheetV2
+ * registered here, with no tabs and no play or edit mode. The header button, docking, following,
+ * closing, and a click that opens the item because there is no mode to follow.
+ */
+async function otherSheetSuite(report, mod, hero) {
+  const SheetConfig = foundry.applications.apps.DocumentSheetConfig;
+  const sheetId = "e2e-loadout.PlainCharacterSheet";
+  if ( !CONFIG.Actor.sheetClasses.character?.[sheetId] ) {
+    class PlainCharacterSheet extends foundry.applications.sheets.ActorSheetV2 {
+      static DEFAULT_OPTIONS = { classes: ["e2e-plain-sheet"], position: { width: 460, height: 620 } };
+      async _renderHTML() {
+        const body = document.createElement("div");
+        body.textContent = `${this.document.name}: a plain sheet`;
+        return body;
+      }
+      _replaceHTML(result, content) { content.replaceChildren(result); }
+    }
+    SheetConfig.registerSheet(Actor, "e2e-loadout", PlainCharacterSheet, { types: ["character"], label: "E2E Plain Sheet" });
+  }
+  const previous = hero.getFlag("core", "sheetClass");
+  await api().equip(hero, gear(hero, "boots"), "feet");
+  try {
+    await hero.setFlag("core", "sheetClass", sheetId);
+    hero._sheet = null;
+    const sheet = hero.sheet;
+    await sheet.render({ force: true });
+    await waitFor(() => sheet.rendered, "the plain sheet");
+    sheet.setPosition({ left: 640, top: 60 });
+    report.check("the plain sheet is neither dnd5e's nor Tidy's", sheet.element.classList.contains("e2e-plain-sheet"));
+    const controls = [...sheet._headerControlButtons()].map(c => c.action);
+    report.check("its header offers the Loadout control", controls.includes("sogromLoadout"), controls.join(", "));
+    report.check("the loadout can dock to it", mod.dock.canDock(sheet));
+
+    const dock = await mod.dock.LoadoutDock.open(sheet);
+    await waitFor(() => dock?.rendered && dock.element.querySelector(".sogrom-loadout"), "the dock beside the plain sheet");
+    const gap = () => sheet.element.getBoundingClientRect().left - dock.element.getBoundingClientRect().right;
+    report.check("the dock docks beside it", Math.abs(gap()) <= 2, `gap ${gap()}`);
+    sheet.setPosition({ left: 760 });
+    await new Promise(r => requestAnimationFrame(r));
+    report.check("…and follows it", Math.abs(gap()) <= 2, `gap ${gap()}`);
+
+    const root = dock.element.querySelector(".sogrom-loadout");
+    report.check("with no mode to follow, the loadout carries none", !root.dataset.loMode);
+    const portrait = root.querySelector("[data-lo-action='portrait']");
+    report.check("…and keeps the portrait button", !!portrait && getComputedStyle(portrait).display !== "none");
+    const boots = gear(hero, "boots");
+    let used = 0;
+    boots.use = async () => { used++; };
+    try {
+      (await waitFor(() => dock.element.querySelector('.lo-slot[data-lo-slot="feet"].is-filled'), "the boots in the dock")).click();
+      await waitFor(() => boots.sheet.rendered, "the boots to open from the dock");
+      report.check("clicking a worn item opens it", used === 0);
+      await boots.sheet.close();
+    } finally {
+      delete boots.use;
+    }
+
+    await sheet.close();
+    await waitFor(() => !mod.dock.LoadoutDock.for(sheet), "the dock to close with the plain sheet");
+    report.check("closing the plain sheet closes the dock", true);
+  } finally {
+    await closeAll();
+    if ( previous ) await hero.setFlag("core", "sheetClass", previous);
+    else await hero.unsetFlag("core", "sheetClass");
+    hero._sheet = null;
+  }
+}
+
+/** The module's API. */
+function api() {
+  return game.modules.get(MODULE).api;
 }
 
 /**

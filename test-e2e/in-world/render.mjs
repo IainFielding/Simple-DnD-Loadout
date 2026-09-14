@@ -220,28 +220,33 @@ export async function tidySuite() {
     report.check("dropping on a slot in Tidy's tab equips, still bound after a redraw", true);
     report.equal("…without Tidy also sorting the inventory", sorts, 0);
 
-    // Tidy's play and edit modes: play uses a worn item, edit opens it.
+    // Tidy's play and edit modes: play uses a weapon, edit opens the slot's menu.
     const dagger = gear(hero, "dagger");
     let used = 0;
     dagger.use = async () => { used++; };
     try {
+      if ( game.modules.get("ember")?.active ) {
+        report.check("with Ember active too, Tidy's tab wears the Ember skin", tidyRoot()?.classList.contains("sogrom-ember"));
+      }
       await sheet.changeSheetMode(1);
       const inTidy = () => tidyRoot()?.querySelector(`.lo-slot[data-lo-slot="offHand"][data-lo-item="${dagger.id}"]`);
       await waitFor(() => (sheet.sheetMode === 1) && inTidy(), "Tidy in play mode");
       inTidy().click();
       await waitFor(() => used === 1, "the dagger to be used from Tidy's tab");
-      report.check("in Tidy's play mode, clicking a worn item uses it", !dagger.sheet.rendered);
+      report.check("in Tidy's play mode, clicking a weapon uses it", !dagger.sheet.rendered);
       const portraitButton = () => tidyRoot()?.querySelector("[data-lo-action='portrait']");
       report.check("…where the portrait button is hidden", !!portraitButton() && getComputedStyle(portraitButton()).display === "none");
       await sheet.changeSheetMode(2);
       await waitFor(() => (sheet.sheetMode === 2) && inTidy(), "Tidy in edit mode");
       inTidy().click();
-      await waitFor(() => dagger.sheet.rendered, "the dagger's sheet from Tidy's tab");
-      report.check("in Tidy's edit mode, clicking it opens it", used === 1);
+      const menu = await waitFor(() => document.querySelector("#context-menu"), "the slot menu from Tidy's tab");
+      const labels = [...menu.querySelectorAll(".context-item")].map(li => li.textContent.trim());
+      menu.remove();
+      report.check("in Tidy's edit mode, clicking it opens its menu", labels.includes("Unequip") && (used === 1) && !dagger.sheet.rendered, labels.join(" | "));
       report.check("…where the portrait button is available", !!portraitButton() && getComputedStyle(portraitButton()).display !== "none");
-      await dagger.sheet.close();
     } finally {
       delete dagger.use;
+      document.querySelector("#context-menu")?.remove();
       await sheet.changeSheetMode(1);
     }
     await mod.actions.unequipSlot(hero, "offHand", { notify: false });

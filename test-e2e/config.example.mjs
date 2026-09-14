@@ -68,6 +68,15 @@ export const WORLDS = {
       + "a sheet this module knows nothing about.</p>",
     modules: [MODULE_ID, "tidy5e-sheet"],
     tidy: true
+  },
+  "loadout-ember-tidy": {
+    id: "loadout-ember-tidy",
+    title: "Loadout (Ember and Tidy 5e)",
+    description: "<p>The Loadout harness with both Ember and Tidy 5e Sheet enabled: the Ember skin inside "
+      + "Tidy's tab, and both integrations at once.</p>",
+    modules: [MODULE_ID, "ember", "tidy5e-sheet"],
+    ember: true,
+    tidy: true
   }
 };
 

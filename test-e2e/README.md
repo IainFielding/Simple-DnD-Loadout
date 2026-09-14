@@ -7,8 +7,11 @@ This harness covers what those unit tests can't:
 - dnd5e actually renders the tab, and the tab switches the way the system's own tabs do.
 - A real `drop` event on a slot equips the item, and the sheet's own drop handler doesn't also sort
   the inventory.
-- The picker, context menu and keyboard operate on the real DOM, and a left-click uses a worn item in
-  play mode and opens it in edit mode, on dnd5e's sheet, the dock and Tidy's tab.
+- The picker, context menu and keyboard operate on the real DOM. A left-click follows the sheet's mode
+  on dnd5e's sheet, the dock and Tidy's tab: play mode uses an item with something to do and opens one
+  without, edit mode opens the slot's menu.
+- The docked loadout works beside a bare character sheet this module has no code for (a plain
+  ActorSheetV2 the harness registers), where a click opens the item.
 - The dock follows a sheet as it moves, flips sides at the screen edge, hides when the sheet is
   minimised, and closes with it.
 - An item equipped from the inventory tab appears on an open loadout and dock.
@@ -44,6 +47,7 @@ own server against it on port 30097.
 npm test                               # loadout: every suite
 npm run test:ember                     # loadout-ember: every suite plus the Ember skin
 node run.mjs --world=loadout-tidy    # every suite plus the Tidy tab and the dock beside Tidy
+node run.mjs --world=loadout-ember-tidy  # both at once: the Ember skin inside Tidy's tab
 node run.mjs --only=dockSuite,domSuite
 node run.mjs --hold                    # leave the browsers open
 HEADED=1 npm test                      # watch it
@@ -57,9 +61,10 @@ asserts on that image; it's there for someone to look at.
 
 | World | Modules | Status |
 | --- | --- | --- |
-| `loadout` | the module only | 194 assertions, green (2026-09-14) |
-| `loadout-ember` | the module and Ember | 204 assertions, green (2026-09-14) |
-| `loadout-tidy` | the module and Tidy 5e Sheet 14.1.0 | 212 assertions, green (2026-09-14) |
+| `loadout` | the module only | 206 assertions, green (2026-09-14) |
+| `loadout-ember` | the module and Ember | 216 assertions, green (2026-09-14) |
+| `loadout-tidy` | the module and Tidy 5e Sheet 14.1.0 | 224 assertions, green (2026-09-14) |
+| `loadout-ember-tidy` | the module, Ember and Tidy 5e Sheet 14.1.0 | 235 assertions, green (2026-09-14) |
 
 All the gear is hand-built by `in-world/provision.mjs`, so no content pack is needed. At the start of
 every suite, each character is reset to "nothing equipped, no loadout flags". In the Ember world, the

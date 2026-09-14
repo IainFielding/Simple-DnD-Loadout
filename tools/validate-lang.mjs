@@ -85,9 +85,9 @@ for ( const file of await sourceFiles(root) ) {
       // A trailing dot comes from a template literal boundary, e.g. `attitude.tier.${key}`.
       const key = match[1].replace(/\.$/, "");
       // `${MODULE_ID}.` also prefixes things that are not localisation keys at all — the
-      // module's query names and its flag scope. Every real key here is sectioned, so a
-      // single bare segment is one of those rather than a missing translation.
-      if ( !key.includes(".") ) continue;
+      // module's query names and its flag scope. A bare segment is only a key when lang declares
+      // it as one (the top-level `title`); any other is one of those, not a missing translation.
+      if ( !key.includes(".") && !declared.has(key) ) continue;
       if ( !asked.has(key) ) asked.set(key, rel);
     }
   }

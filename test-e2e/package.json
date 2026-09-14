@@ -9,6 +9,7 @@
     "test": "node run.mjs",
     "test:ember": "node run.mjs --world=loadout-ember",
     "test:tidy": "node run.mjs --world=loadout-tidy",
+    "test:ember-tidy": "node run.mjs --world=loadout-ember-tidy",
     "hold": "node run.mjs --hold"
   },
   "devDependencies": {

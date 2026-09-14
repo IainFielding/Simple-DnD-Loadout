@@ -49,17 +49,20 @@ it around.
     up and the rest fade.
   - Drag between slots to move or swap.
   - Click an empty slot to pick from what you're carrying, with search.
-  - Click a worn item to use it while the sheet is in play mode, or to open it in edit mode, just like
-    the sheet's own inventory. The docked loadout follows the mode of the sheet it's docked to.
-  - Right-click a slot to view, use, attune, swap or unequip the item, in either mode.
+  - In play mode, click a worn weapon, wand or torch to use it. An item with nothing to use, such as
+    boots or a cloak, opens instead of posting its card to chat.
+  - In edit mode, click a worn item for its menu: swap, unequip, attune.
+  - Right-click a slot for the same menu in either mode. The docked loadout follows the mode of the
+    sheet it's docked to.
   - Everything works from the keyboard too. Press **Delete** on a slot to take its item off.
 - **Attunement at a glance.** A sun badge marks attuned items. A hollow badge and a dimmed picture
   mark items that need attunement to work. Pips under the loadout count your attunements against your
   limit.
 - **Saved sets.** Dress for battle and save it as "Battle", dress for court and save that too, then
   switch between them with one click from the button under the loadout. A set puts its items back
-  where you had them and takes everything else off. If you've sold or lost something since, the set
-  goes on without it and tells you what's missing.
+  where you had them and takes everything else off. An item deleted and added back, say by
+  re-importing a character, is found again by name. If you've sold or lost something, the set goes on
+  without it and tells you what's missing.
 - **Know before you wear it.** An amber mark warns about armour or a weapon your character isn't
   proficient with, and armour that needs more Strength than they have. Hover the item to read why.
   It's only a warning: the system lets you wear it, and so does the loadout.
@@ -103,7 +106,7 @@ These are under **Configure Settings → Module Settings**.
 | Dropping New Items | Gamemaster only | Who may drop an item the character doesn't already carry, from a compendium or the Items sidebar, onto the loadout. It's added to the inventory and equipped. |
 | Configure Slots | 2 rings, 2 ranged, 4 trinkets, camp clothes off | How many ring slots (1–4), ranged weapon slots (0–2) and trinket slots (0–5) every loadout has, which optional slots (head, neck, back, wrists, hands, waist, feet, light source, instrument, tools) are shown, and whether the three camp clothes slots are on. |
 
-**Hotkey:** **Shift + P** opens or closes the docked loadout for your selected token's character, or
+**Hotkey:** **Shift + L** opens or closes the docked loadout for your selected token's character, or
 your own character if no token is selected. You can change it under **Configure Controls**.
 
 ## Compatibility
@@ -111,8 +114,8 @@ your own character if no token is selected. You can change it under **Configure 
 | Module | Works together? | What happens |
 | --- | --- | --- |
 | [Ember](https://foundryvtt.com/packages/ember) | Yes, automatic | Ember skin, and stays out of Ember's character builder. See [Running alongside Ember](#running-alongside-ember). |
-| [Tidy 5e Sheet](https://foundryvtt.com/packages/tidy5e-sheet) | Yes, tab and docked | Tested with Tidy 5e 14.1.0. Tidy's character sheet gets its own **Loadout** tab, added through Tidy's tab API, so you can hide or reorder it in Tidy's tab settings like any other tab. The Loadout button also appears in Tidy's sheet header, and the docked loadout sits beside Tidy's sheet and follows it. |
-| Other character sheets | Docked loadout | The docked loadout is built to work beside any character sheet made the standard Foundry way. Only Tidy 5e has been tested. |
+| [Tidy 5e Sheet](https://foundryvtt.com/packages/tidy5e-sheet) | Yes, tab and docked | Tested with Tidy 5e 14.1.0. Tidy's character sheet gets its own **Loadout** tab, added through Tidy's tab API, so you can hide or reorder it in Tidy's tab settings like any other tab. The Loadout button also appears in Tidy's sheet header, and the docked loadout sits beside Tidy's sheet and follows it. With Ember active as well, Tidy's tab wears the Ember skin. |
+| Other character sheets | Docked loadout | The docked loadout works beside any character sheet made the standard Foundry way. It is tested beside a bare ApplicationV2 character sheet with no tabs or modes, where clicking a worn item opens it. |
 | Content modules (Player's Handbook, DMG, homebrew) | Yes | Anything using the standard D&D 5e item types can be worn or carried. Unusually named homebrew goes to a sensible slot, and in the default lenient mode can be moved wherever you like. |
 | [Simple D&D Character Creator](https://foundryvtt.com/packages/sogrom-dnd5e-character-creator), [Simple D&D Magic Shop](https://foundryvtt.com/packages/sogrom-simple-dnd5e-magic-shop) | Yes | Same look, same Ember skin. |
 

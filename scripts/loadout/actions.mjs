@@ -13,7 +13,7 @@ import {
 } from "../config.mjs";
 import { itemFacts } from "../data/item-facts.mjs";
 import { planPlace, planRemove } from "../data/layout.mjs";
-import { MAX_SETS, captureSet, cleanSetName, findSet, planApplySet, upsertSet } from "../data/sets.mjs";
+import { MAX_SETS, captureSet, cleanSetName, findSet, planApplySet, relinkSet, upsertSet } from "../data/sets.mjs";
 import { readLayout, readSets, slotLabel } from "./context.mjs";
 
 /** Show a refusal to the user. `data` fills the reason's placeholders. */
@@ -135,11 +135,20 @@ export async function deleteSet(actor, idOrName, { notify = true } = {}) {
  */
 export async function applySet(actor, idOrName, { notify = true } = {}) {
   if ( !actor?.isOwner ) return refuse("notOwner", { actor: actor?.name ?? "" }, notify);
-  const set = findSet(readSets(actor), idOrName);
+  const sets = readSets(actor);
+  const set = findSet(sets, idOrName);
   if ( !set ) return refuse("setUnknown", {}, notify);
   const { layout, items } = readLayout(actor);
   const plan = planApplySet(layout, items, set);
-  if ( plan.unchanged ) return false;
+  // Items found again under new ids are written back into the set, so next time it needs no search
+  // and the footer recognises the loadout as this set.
+  const relinkedSets = Object.keys(plan.relinked).length
+    ? { [`flags.${MODULE_ID}.${FLAGS.sets}`]: sets.map(s => (s === set ? relinkSet(s, plan.relinked) : s)) }
+    : null;
+  if ( plan.unchanged ) {
+    if ( relinkedSets ) await actor.update(relinkedSets);
+    return false;
+  }
   if ( !callCancellable(HOOKS.preApplySet, { actor, set }) ) return refuse("vetoed", {}, notify);
   // A set is many equips at once, and a module refusing one of them through `preEquip` (a cursed
   // item, a slot it reserves) must not be bypassed by saving the loadout first.
@@ -148,7 +157,7 @@ export async function applySet(actor, idOrName, { notify = true } = {}) {
       return refuse("vetoed", {}, notify);
     }
   }
-  await commit(actor, plan);
+  await commit(actor, plan, relinkedSets);
   if ( notify && plan.missing.length ) {
     const list = game.i18n.getListFormatter?.({ type: "conjunction" })?.format(plan.missing) ?? plan.missing.join(", ");
     ui.notifications?.warn(t("sets.missing", { set: set.name, items: list }));
@@ -253,14 +262,18 @@ function refuse(reason, data, notify) {
  * write is the only write, so it renders.
  * @param {Actor} actor
  * @param {import("../data/layout.mjs").Plan} plan
+ * @param {object|null} [actorChanges]  More actor changes to make in the same first write.
  */
-async function commit(actor, plan) {
+async function commit(actor, plan, actorChanges = null) {
   const updates = [
     ...plan.equip.map(_id => ({ _id, "system.equipped": true })),
     ...plan.unequip.map(_id => ({ _id, "system.equipped": false }))
   ];
   log("commit", plan);
-  await actor.update({ [`flags.${MODULE_ID}.${FLAGS.slots}`]: plan.assignments }, { render: !updates.length });
+  await actor.update(
+    { [`flags.${MODULE_ID}.${FLAGS.slots}`]: plan.assignments, ...(actorChanges ?? {}) },
+    { render: !updates.length }
+  );
   if ( updates.length ) await actor.updateEmbeddedDocuments("Item", updates);
 
   for ( const { item, key } of plan.removed ) {

@@ -4,7 +4,9 @@
  *
  * A set is a snapshot of the loadout: every filled slot, plus the items worn under Also Worn. Applying
  * it means "wear exactly this": the saved items go back in their saved slots, and every other item
- * worn in a slot comes off. Items that are no longer carried are skipped and reported. An item whose
+ * worn in a slot comes off. A saved item that has been deleted and added again (re-imported, rebuilt
+ * by a character builder) has a new id, so it is found again by its real name and type. Items that
+ * are no longer carried at all are skipped and reported. An item whose
  * saved slot has gone (the GM changed the layout) or no longer takes it (Strict Slot Matching) is
  * still worn, and the loadout places it wherever it fits, the same as an item equipped from the
  * inventory.
@@ -32,6 +34,8 @@ export const MAX_SET_NAME = 40;
  * @property {Record<string, string>} slots  Slot key → item id, filled slots only.
  * @property {string[]} alsoWorn             Items worn with no slot when the set was saved.
  * @property {Record<string, string>} names  Item id → name when saved, to name what has gone missing.
+ * @property {Record<string, {name: string, type: string}>} sources  Item id → its real (source) name
+ *   and document type, to find the item again when its id has changed.
  */
 
 /** Trim and shorten a name; empty when there is nothing usable. */
@@ -59,7 +63,12 @@ export function normaliseSets(raw) {
     }
     const alsoWorn = Array.isArray(entry.alsoWorn) ? entry.alsoWorn.filter(i => (typeof i === "string") && i) : [];
     const names = (entry.names && (typeof entry.names === "object")) ? { ...entry.names } : {};
-    sets.push({ id, name, slots, alsoWorn, names });
+    // Sets saved before `sources` existed have none, and fall back on `names` alone.
+    const sources = {};
+    for ( const [itemId, ref] of Object.entries(entry.sources ?? {}) ) {
+      if ( (typeof ref?.name === "string") && ref.name ) sources[itemId] = { name: ref.name, type: String(ref.type ?? "") };
+    }
+    sets.push({ id, name, slots, alsoWorn, names, sources });
     if ( sets.length >= MAX_SETS ) break;
   }
   return sets;
@@ -74,14 +83,38 @@ export function normaliseSets(raw) {
 export function captureSet(layout, { id, name }) {
   const slots = {};
   const names = {};
+  const sources = {};
+  const remember = item => {
+    names[item.id] = item.name;
+    sources[item.id] = { name: item.sourceName || item.name, type: item.type };
+  };
   for ( const cell of layout.cells ) {
     if ( !cell.item ) continue;
     slots[cell.key] = cell.item.id;
-    names[cell.item.id] = cell.item.name;
+    remember(cell.item);
   }
   const alsoWorn = layout.unslotted.map(item => item.id);
-  for ( const item of layout.unslotted ) names[item.id] = item.name;
-  return { id, name: cleanSetName(name), slots, alsoWorn, names };
+  for ( const item of layout.unslotted ) remember(item);
+  return { id, name: cleanSetName(name), slots, alsoWorn, names, sources };
+}
+
+/**
+ * A copy of a set with some item ids replaced, for storing a set whose items were found again under
+ * new ids.
+ * @param {SavedSet} set
+ * @param {Record<string, string>} relinked  Old item id → new item id.
+ * @returns {SavedSet}
+ */
+export function relinkSet(set, relinked) {
+  const swap = id => relinked[id] ?? id;
+  const rekey = map => Object.fromEntries(Object.entries(map ?? {}).map(([id, value]) => [swap(id), value]));
+  return {
+    ...set,
+    slots: Object.fromEntries(Object.entries(set.slots).map(([key, id]) => [key, swap(id)])),
+    alsoWorn: set.alsoWorn.map(swap),
+    names: rekey(set.names),
+    sources: rekey(set.sources)
+  };
 }
 
 /**
@@ -137,8 +170,9 @@ export function matchingSet(sets, layout) {
  * @param {import("./layout.mjs").Layout} layout  The loadout as it is now.
  * @param {import("./item-facts.mjs").ItemFacts[]} items  Everything the actor carries.
  * @param {SavedSet} set
- * @returns {import("./layout.mjs").Plan & {missing: string[], unchanged: boolean}}
- *   `missing` names saved items the actor no longer carries.
+ * @returns {import("./layout.mjs").Plan & {missing: string[], relinked: Record<string, string>, unchanged: boolean}}
+ *   `missing` names saved items the actor no longer carries. `relinked` maps the saved id of each item
+ *   found again under a new id to that new id.
  */
 export function planApplySet(layout, items, set) {
   const byId = new Map(items.map(item => [item.id, item]));
@@ -148,10 +182,30 @@ export function planApplySet(layout, items, set) {
   const wear = new Set();
   const missing = new Set();
   const placedIds = new Set();
+  const relinked = {};
+
+  // An item found again by name must not be one the set already names by id, nor one already taken
+  // for another missing entry: two lost daggers come back as two daggers, not one dagger twice.
+  const named = new Set([...Object.values(set.slots), ...set.alsoWorn].filter(id => byId.get(id)?.slottable));
+  const taken = new Set();
+  const findAgain = id => {
+    const ref = set.sources?.[id] ?? (set.names?.[id] ? { name: set.names[id], type: "" } : null);
+    if ( !ref?.name ) return null;
+    const found = items
+      .filter(item => item.slottable && !named.has(item.id) && !taken.has(item.id)
+        && ((item.sourceName || item.name) === ref.name) && (!ref.type || (item.type === ref.type)))
+      .sort((a, b) => (a.sort - b.sort) || a.id.localeCompare(b.id))[0];
+    if ( !found ) return null;
+    taken.add(found.id);
+    relinked[id] = found.id;
+    return found;
+  };
 
   const lookup = id => {
     const item = byId.get(id);
     if ( item?.slottable ) return item;
+    const again = relinked[id] ? byId.get(relinked[id]) : findAgain(id);
+    if ( again ) return again;
     missing.add(set.names?.[id] || id);
     return null;
   };
@@ -159,30 +213,34 @@ export function planApplySet(layout, items, set) {
   // Cells run main hand before off hand in each pair, so the off hand is judged against the main
   // hand this set puts on, not the one being taken off.
   for ( const cell of layout.cells ) {
-    const id = set.slots[cell.key];
-    if ( !id || placedIds.has(id) ) continue;
-    const item = lookup(id);
-    if ( !item ) continue;
+    const savedId = set.slots[cell.key];
+    if ( !savedId ) continue;
+    const item = lookup(savedId);
+    if ( !item || placedIds.has(item.id) ) continue;
     const camp = isCampSlot(cell);
     const asOff = pairs.find(p => p.off === cell);
     const mainItem = asOff ? byId.get(next[asOff.main.key] ?? "") : null;
     const fits = accepts(cell.kind, item, { strict: layout.strict }).ok
       && !(asOff && (item.twoHanded || mainItem?.twoHanded));
     if ( fits ) {
-      next[cell.key] = id;
-      placedIds.add(id);
+      next[cell.key] = item.id;
+      placedIds.add(item.id);
     }
     // Packed items stay packed even when their camp slot won't take them; anything else is worn.
-    if ( !camp ) wear.add(id);
+    if ( !camp ) wear.add(item.id);
   }
 
   // Saved slots the layout no longer has: the items are still worn, wherever they now fit.
-  for ( const [key, id] of Object.entries(set.slots) ) {
+  for ( const [key, savedId] of Object.entries(set.slots) ) {
     if ( key in next ) continue;
     const kind = kindOfKey(key);
-    if ( lookup(id) && !(kind && isCampSlot({ kind })) ) wear.add(id);
+    const item = lookup(savedId);
+    if ( item && !(kind && isCampSlot({ kind })) ) wear.add(item.id);
   }
-  for ( const id of set.alsoWorn ) if ( lookup(id) ) wear.add(id);
+  for ( const savedId of set.alsoWorn ) {
+    const item = lookup(savedId);
+    if ( item ) wear.add(item.id);
+  }
 
   const equip = [];
   const unequip = [];
@@ -204,5 +262,5 @@ export function planApplySet(layout, items, set) {
   for ( const item of layout.unslotted ) if ( unequip.includes(item.id) ) removed.push({ item, key: null });
 
   const unchanged = !equip.length && !unequip.length && !placed.length && !removed.length;
-  return { assignments: next, equip, unequip, placed, removed, missing: [...missing], unchanged };
+  return { assignments: next, equip, unequip, placed, removed, missing: [...missing], relinked, unchanged };
 }

@@ -3,7 +3,7 @@
  *
  * ## Following the sheet without wrapping it
  *
- * theripper93's Paper Doll UI module, which this one replaces, kept its window attached by replacing the sheet's
+ * theripper93's Paper Doll UI keeps its window attached by replacing the sheet's
  * `setPosition`, `minimize`, `maximize` and `close` methods — which breaks the moment another
  * module wraps the same methods, or the sheet class changes. ApplicationV2 makes that unnecessary:
  * every application is an event target that emits `position` after it moves or resizes and `close`

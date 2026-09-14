@@ -140,7 +140,7 @@ function registerKeybindings() {
   game.keybindings.register(MODULE_ID, "toggleDock", {
     name: `${MODULE_ID}.keybindings.toggleDock.name`,
     hint: `${MODULE_ID}.keybindings.toggleDock.hint`,
-    editable: [{ key: "KeyP", modifiers: ["Shift"] }],
+    editable: [{ key: "KeyL", modifiers: ["Shift"] }],
     restricted: false,
     onDown: () => {
       const actor = canvas?.tokens?.controlled?.[0]?.actor ?? game.user?.character;
