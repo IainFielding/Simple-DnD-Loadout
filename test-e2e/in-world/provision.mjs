@@ -42,7 +42,21 @@ export const GEAR = [
   { key: "ioun", name: "Ioun Stone of Awareness", type: "equipment", img: "icons/commodities/gems/gem-rough-cushion-blue.webp",
     system: { type: { value: "wondrous" }, rarity: "rare", properties: ["mgc"], attunement: "required" } },
   { key: "potion", name: "Potion of Healing", type: "consumable", img: "icons/consumables/potions/bottle-round-corked-red.webp",
-    system: { type: { value: "potion" } } }
+    system: { type: { value: "potion" } } },
+  { key: "longbow", name: "Longbow", type: "weapon", img: "icons/weapons/bows/longbow-recurve-leather-brown.webp",
+    system: { type: { value: "martialR" }, properties: ["amm", "hvy", "two"] } },
+  { key: "handCrossbow", name: "Hand Crossbow", type: "weapon", img: "icons/weapons/crossbows/crossbow-slotted.webp",
+    system: { type: { value: "martialR" }, properties: ["amm", "lgt", "lod"] } },
+  // A torch in dnd5e 6.0 is a consumable with the "trinket" subtype; the tools below are real tool
+  // items of the art and music types, so the tool-type rule is what files them.
+  { key: "torch", name: "Torch", type: "consumable", img: "icons/sundries/lights/torch-brown-lit.webp",
+    system: { type: { value: "trinket" } } },
+  { key: "tinderbox", name: "Tinderbox", type: "equipment", img: "icons/sundries/lights/torch-black.webp",
+    system: { type: { value: "trinket" } } },
+  { key: "lute", name: "Lute", type: "tool", img: "icons/tools/instruments/lute-gold-brown.webp",
+    system: { type: { value: "music" } } },
+  { key: "smiths", name: "Smith's Tools", type: "tool", img: "icons/skills/trades/smithing-tongs-metal-red.webp",
+    system: { type: { value: "art" } } }
 ];
 
 /**

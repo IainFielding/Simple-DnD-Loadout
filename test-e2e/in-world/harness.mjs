@@ -115,7 +115,7 @@ function dropOn(slot, payload) {
 export async function all() {
   const mod = await load();
   const results = {};
-  const suites = { tabSuite, equipSuite, domSuite, dockSuite, apiSuite, settingsSuite, configSuite };
+  const suites = { tabSuite, equipSuite, kitSuite, domSuite, dockSuite, apiSuite, settingsSuite, configSuite };
   for ( const [name, suite] of Object.entries(suites) ) {
     const report = new Report();
     const hero = game.actors.getName(HERO);
@@ -146,7 +146,9 @@ async function tabSuite(report, mod, hero) {
   report.check("the sheet is dnd5e's character sheet", sheet instanceof Sheet);
   report.check("the nav shows the tab button", !!sheet.element.querySelector(`nav.tabs [data-tab="${TAB}"]`));
   report.check("the doll tab is active", sheet.element.querySelector(`section.tab[data-tab="${TAB}"]`)?.classList.contains("active"));
-  report.equal("the default doll draws 16 slots", root().querySelectorAll(".pd-slot").length, 16);
+  report.equal("the default doll draws 21 slots", root().querySelectorAll(".pd-slot").length, 21);
+  report.equal("the hands row reads ranged, main, off, ranged", [...root().querySelectorAll(".pd-hands .pd-slot")].map(s => s.dataset.pdSlot), ["ranged-1", "mainHand", "offHand", "ranged-2"]);
+  report.equal("the kit row holds light, instrument and tools", [...root().querySelectorAll(".pd-kit .pd-slot")].map(s => s.dataset.pdSlot), ["light", "instrument", "tools"]);
   report.check("no slot uses dnd5e's data-item-id", !root().querySelector("[data-item-id]"));
 
   sheet.changeTab("inventory", "primary");
@@ -232,6 +234,47 @@ async function equipSuite(report, mod, hero) {
   Hooks.off("simplePaperDoll.preEquip", veto);
   report.check("equipped hook fires with the live item", seen.includes("Leather Armor@body"), seen.join(", "));
   report.check("preEquip can veto", vetoed === false && !gear(hero, "dagger").system.equipped);
+}
+
+/** The ranged and kit slots, against real dnd5e weapon, consumable and tool documents. */
+async function kitSuite(report, mod, hero) {
+  const { equipToSlot } = mod.actions;
+  const { layout } = mod.context.readLayout(hero);
+  const has = key => layout.cells.some(c => c.key === key);
+  report.check("the default doll has both ranged slots and the kit row", ["ranged-1", "ranged-2", "light", "instrument", "tools"].every(has));
+
+  // Equipping the ordinary way lands each in its own slot.
+  for ( const key of ["longbow", "torch", "lute", "smiths"] ) await gear(hero, key).update({ "system.equipped": true });
+  report.equal("an equipped longbow is slung, not held", slotItem(mod, hero, "ranged-1"), gear(hero, "longbow").id);
+  report.equal("an equipped torch goes to the light slot", slotItem(mod, hero, "light"), gear(hero, "torch").id);
+  report.equal("a lute goes to the instrument slot", slotItem(mod, hero, "instrument"), gear(hero, "lute").id);
+  report.equal("smith's tools go to the tools slot", slotItem(mod, hero, "tools"), gear(hero, "smiths").id);
+
+  // A slung two-handed bow leaves both hands free.
+  report.check("a shield still fits the off hand beside a slung longbow", await equipToSlot(hero, gear(hero, "shield"), "offHand", { notify: false }));
+  report.check("…and the longbow stays equipped", gear(hero, "longbow").system.equipped);
+
+  // A torch in the off hand.
+  report.check("the torch moves into the off hand", await equipToSlot(hero, gear(hero, "torch"), "offHand", { sourceKey: "light", notify: false }));
+  report.check("…replacing the shield", !gear(hero, "shield").system.equipped && slotItem(mod, hero, "light") === null);
+
+  // Gripping the longbow blocks the off hand and drops the torch.
+  report.check("the longbow moves into the main hand", await equipToSlot(hero, gear(hero, "longbow"), "mainHand", { sourceKey: "ranged-1", notify: false }));
+  report.check("…which drops the torch from the off hand", !gear(hero, "torch").system.equipped);
+  report.check("…and blocks it", mod.context.readLayout(hero).layout.cells.find(c => c.key === "offHand").blocked);
+
+  // Refusals.
+  report.check("a lute will not go on the head", !(await equipToSlot(hero, gear(hero, "lute"), "head", { notify: false })));
+  report.check("a longsword will not go in a ranged slot", !(await equipToSlot(hero, gear(hero, "longsword"), "ranged-2", { notify: false })));
+  report.check("a tinderbox is not a light source", !(await equipToSlot(hero, gear(hero, "tinderbox"), "light", { notify: false })));
+  report.check("a hand crossbow fills the second ranged slot", await equipToSlot(hero, gear(hero, "handCrossbow"), "ranged-2", { notify: false }));
+
+  // The picker for a kit slot lists only that kind.
+  const { root, sheet } = await openTab(hero);
+  root().querySelector('.pd-slot[data-pd-slot="light"]').click();
+  const picker = await waitFor(() => root()?.querySelector(".pd-picker"), "the light picker");
+  report.equal("the light picker lists only light sources", [...picker.querySelectorAll(".pd-picker-name")].map(n => n.textContent.trim()), ["Torch"]);
+  await sheet.close();
 }
 
 /** Real events at the rendered doll. */
@@ -430,13 +473,16 @@ async function configSuite(report, mod, hero) {
   const slots = new SlotConfigApp();
   await slots.render({ force: true });
   await waitFor(() => slots.rendered && slots.element.querySelector("range-picker[name=rings]"), "the slot config form");
-  report.equal("the slot form offers every optional accessory slot", slots.element.querySelectorAll('input[name^="enabled."]').length, 7);
+  report.equal("the slot form offers every toggleable slot", slots.element.querySelectorAll('input[name^="enabled."]').length, 10);
+  report.check("…and a ranged slot count", !!slots.element.querySelector("range-picker[name=ranged]"));
   try {
     slots.element.querySelector("range-picker[name=rings]").value = 3;
     slots.element.querySelector("range-picker[name=trinkets]").value = 2;
+    slots.element.querySelector("range-picker[name=ranged]").value = 1;
     slots.element.querySelector('input[name="enabled.waist"]').checked = false;
+    slots.element.querySelector('input[name="enabled.instrument"]').checked = false;
     await slots.submit();
-    report.equal("submitting saves the layout", game.settings.get(MODULE, "slotLayout"), { rings: 3, trinkets: 2, disabled: ["waist"] });
+    report.equal("submitting saves the layout", game.settings.get(MODULE, "slotLayout"), { rings: 3, trinkets: 2, ranged: 1, disabled: ["waist", "instrument"] });
     report.equal("…which the doll reads", mod.context.readLayout(hero).layout.cells.filter(c => c.kind === "ring").length, 3);
   } finally {
     await game.settings.set(MODULE, "slotLayout", before);

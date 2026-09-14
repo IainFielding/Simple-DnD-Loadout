@@ -18,11 +18,17 @@ bare kind as the key.
 | `head`, `neck`, `back`, `wrists`, `hands`, `waist`, `feet` | 1 each | Worn accessories |
 | `body` | 1 | Armour, robes, clothing |
 | `ring` | 2 (1–4) | Rings |
-| `mainHand` | 1 | Weapons, rods, wands, held focuses |
-| `offHand` | 1 | Shields, one-handed weapons, held focuses. Blocked while the main hand holds a two-handed weapon. |
-| `trinket` | 4 (0–8) | Any worn accessory |
+| `mainHand` | 1 | Weapons (ranged ones included), rods, wands, held focuses |
+| `offHand` | 1 | Shields, one-handed weapons, held focuses, light sources. Blocked while the main hand holds a two-handed weapon. |
+| `ranged` | 2 (0–2) | Ranged weapons, and thrown weapons unless Strict Slot Matching is on. A two-handed weapon here is slung and does not block the off hand. Keys `ranged-1` and `ranged-2` are drawn either side of the hands. |
+| `light` | 1 | Light sources: torches, lamps, lanterns, candles |
+| `instrument` | 1 | Musical instruments (`tool` items of the `music` type) |
+| `tools` | 1 | Artisan's tools (`tool` items of the `art` type) |
+| `trinket` | 4 (0–8) | Any worn accessory. Never kit. |
 
-`api.SLOT_KINDS` lists the kinds in draw order. The GM controls counts and which accessory slots are
+Gaming sets and untyped kits (thieves' tools, herbalism kits) have no slot.
+
+`api.SLOT_KINDS` lists the kinds in definition order. The GM controls counts and which accessory slots are
 shown, so read `api.layout(actor)` for the keys that actually exist.
 
 ### Pinning an item to a slot kind
@@ -39,8 +45,9 @@ slot, whether Strict Slot Matching is on or off.
 ### `classify(item) → {kind, source} | null`
 
 Where an item naturally goes. `source` says which rule decided: `"flag"`, `"type"` (dnd5e's own
-data: weapon, armour, shield, ring), `"name"`, `"icon"` or `"fallback"`. Returns `null` for items
-that can't be worn, such as potions, tools, loot and siege weapons.
+data: weapon, armour, shield, ring, artisan's tools, instrument), `"name"`, `"icon"` or
+`"fallback"`. Returns `null` for items that can't be slotted, such as potions, gaming sets, untyped
+kits, loot and siege weapons.
 
 ### `layout(actor) → {slots, unslotted}`
 

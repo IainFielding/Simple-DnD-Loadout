@@ -1,12 +1,12 @@
 /**
- * GM window: how many ring and trinket slots every doll has, and which optional slots show.
+ * GM window: how many ring, ranged and trinket slots every doll has, and which optional slots show.
  *
  * Opened from the module's settings menu. Writes the `slotLayout` world setting, whose `onChange`
  * (main.mjs) re-renders every open sheet and dock so the change is visible straight away.
  */
 
 import { DEFAULTS, MODULE_ID, SETTINGS, setting, t, tpl } from "../config.mjs";
-import { MAX_RINGS, MAX_TRINKETS, OPTIONAL_KINDS, layoutFromForm, normaliseLayout } from "../data/slots.mjs";
+import { MAX_RANGED, MAX_RINGS, MAX_TRINKETS, TOGGLED_KINDS, layoutFromForm, normaliseLayout } from "../data/slots.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -45,9 +45,11 @@ export class SlotConfigApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       rings: layout.rings,
       trinkets: layout.trinkets,
+      ranged: layout.ranged,
       maxRings: MAX_RINGS,
       maxTrinkets: MAX_TRINKETS,
-      optional: OPTIONAL_KINDS.filter(kind => kind !== "trinket").map(kind => ({
+      maxRanged: MAX_RANGED,
+      optional: TOGGLED_KINDS.map(kind => ({
         kind,
         label: t(`slot.kind.${kind}`),
         enabled: !layout.disabled.includes(kind)

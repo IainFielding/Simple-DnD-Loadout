@@ -84,6 +84,33 @@ export const WEARABLES = [
   { name: "Wand of Magic Missiles", subtype: "wand", img: "icons/weapons/wands/wand-gem-violet.webp", kind: "mainHand" },
   { name: "Rod of Absorption", subtype: "rod", img: "icons/weapons/staves/staff-ornate-purple.webp", kind: "mainHand" },
 
+  // --- Ranged weapons (equipment24/weapons)
+  { name: "Longbow", type: "weapon", subtype: "martialR", img: "icons/weapons/bows/longbow-recurve-leather-brown.webp", kind: "ranged" },
+  { name: "Hand Crossbow", type: "weapon", subtype: "martialR", img: "icons/weapons/crossbows/crossbow-slotted.webp", kind: "ranged" },
+  { name: "Shortbow", type: "weapon", subtype: "simpleR", img: "icons/weapons/bows/shortbow-leather.webp", kind: "ranged" },
+  { name: "Dart", type: "weapon", subtype: "simpleR", img: "icons/weapons/thrown/dart-feathered.webp", kind: "ranged" },
+
+  // --- Light sources. The plain ones are "trinket" subtype, some consumable, some equipment.
+  { name: "Torch", type: "consumable", subtype: "trinket", img: "icons/sundries/lights/torch-brown-lit.webp", kind: "light" },
+  { name: "Candle", type: "consumable", subtype: "trinket", img: "icons/sundries/lights/candle-unlit-tan.webp", kind: "light" },
+  { name: "Lamp", subtype: "trinket", img: "icons/sundries/lights/lantern-iron-yellow.webp", kind: "light" },
+  { name: "Lantern, Hooded", subtype: "trinket", img: "icons/sundries/lights/lantern-steel.webp", kind: "light" },
+  { name: "Lantern of Revealing", subtype: "wondrous", img: "icons/sundries/lights/lantern-iron-yellow.webp", kind: "light" },
+  { name: "Candle of Invocation", type: "consumable", subtype: "trinket", img: "icons/sundries/lights/candle-unlit-yellow.webp", kind: "light" },
+  // Ships with a lit-torch icon. It is not a light source.
+  { name: "Tinderbox", subtype: "trinket", img: "icons/sundries/lights/torch-black.webp", kind: "trinket" },
+
+  // --- Musical instruments: decided by tool type, whatever the icon says
+  { name: "Lute", type: "tool", subtype: "music", img: "icons/tools/instruments/lute-gold-brown.webp", kind: "instrument" },
+  { name: "Drum", type: "tool", subtype: "music", img: "icons/tools/instruments/drum-brown-red.webp", kind: "instrument" },
+  { name: "Bagpipes", type: "tool", subtype: "music", img: "icons/sundries/survival/waterskin-leather-brown.webp", kind: "instrument" },
+
+  // --- Artisan's tools: likewise
+  { name: "Smith's Tools", type: "tool", subtype: "art", img: "icons/skills/trades/smithing-tongs-metal-red.webp", kind: "tools" },
+  { name: "Alchemist's Supplies", type: "tool", subtype: "art", img: "icons/tools/cooking/mortar-herbs-yellow.webp", kind: "tools" },
+  { name: "Weaver's Tools", type: "tool", subtype: "art", img: "icons/equipment/back/cloak-hooded-pink.webp", kind: "tools" },
+  { name: "Jeweler's Tools", type: "tool", subtype: "art", img: "icons/commodities/gems/gem-rough-rose-teal.webp", kind: "tools" },
+
   // --- Trinkets: worn magic with no body part of its own
   { name: "Ioun Stone of Protection", subtype: "wondrous", img: "icons/commodities/gems/gem-rough-ball-purple.webp", kind: "trinket" },
   { name: "Stone of Good Luck (Luckstone)", subtype: "wondrous", img: "icons/commodities/gems/gem-rough-rectangle-red.webp", kind: "trinket" },
@@ -95,6 +122,9 @@ export const WEARABLES = [
 export const NOT_SLOTTABLE = [
   { name: "Potion of Healing", type: "consumable", subtype: "potion", img: "icons/consumables/potions/potion-bottle-corked-red.webp" },
   { name: "Thieves' Tools", type: "tool", subtype: "", img: "icons/tools/hand/lockpicks-steel-grey.webp" },
+  // Artisan's tools and instruments have slots; gaming sets and untyped kits do not.
+  { name: "Dice", type: "tool", subtype: "game", img: "icons/sundries/gaming/dice-runed-brown.webp" },
+  { name: "Disguise Kit", type: "tool", subtype: "", img: "icons/equipment/back/cloak-hooded-blue.webp" },
   { name: "Backpack", type: "container", subtype: "", img: "icons/containers/bags/pack-leather-white-tan.webp" },
   { name: "Ballista", type: "weapon", subtype: "siege", img: "icons/weapons/crossbows/crossbow-heavy-black.webp" },
   { name: "Gold Ring", type: "loot", subtype: "", img: "icons/equipment/finger/ring-band-gold.webp" }

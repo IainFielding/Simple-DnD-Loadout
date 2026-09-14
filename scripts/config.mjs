@@ -53,7 +53,7 @@ export const DEFAULTS = Object.freeze({
   [SETTINGS.autoDock]: false,
   [SETTINGS.strictSlots]: false,
   [SETTINGS.foreignDrops]: "gm",
-  [SETTINGS.slotLayout]: Object.freeze({ rings: 2, trinkets: 4, disabled: Object.freeze([]) }),
+  [SETTINGS.slotLayout]: Object.freeze({ rings: 2, trinkets: 4, ranged: 2, disabled: Object.freeze([]) }),
   [SETTINGS.debug]: false
 });
 

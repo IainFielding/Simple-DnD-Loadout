@@ -46,6 +46,12 @@
     <div class="pd-picker-host"></div>
   </div>
 
+  {{#if groups.kit.length}}
+  <div class="pd-kit" role="group">
+    {{#each groups.kit}}{{> sogrom-pd-slot}}{{/each}}
+  </div>
+  {{/if}}
+
   {{#if groups.trinkets.length}}
   <div class="pd-trinkets" role="group" aria-label="{{localize "sogrom-simple-dnd5e-paper-doll.slot.kind.trinket"}}">
     {{#each groups.trinkets}}{{> sogrom-pd-slot}}{{/each}}

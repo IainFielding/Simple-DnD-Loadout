@@ -12,8 +12,12 @@
         "waist": "Waist",
         "feet": "Feet",
         "ring": "Ring",
+        "ranged": "Ranged",
         "mainHand": "Main Hand",
         "offHand": "Off Hand",
+        "light": "Light Source",
+        "instrument": "Instrument",
+        "tools": "Artisan's Tools",
         "trinket": "Trinket"
       },
       "numbered": "{label} {index}",
@@ -88,6 +92,8 @@
       "title": "Paper Doll Slots",
       "intro": "Choose which slots every character's paper doll shows. Items already worn in a slot you turn off stay equipped and appear under Also Worn.",
       "rings": "Ring slots",
+      "ranged": "Ranged weapon slots",
+      "rangedHint": "Bows, crossbows and slings carried ready, either side of the hands. A two-handed bow here doesn't tie up the off hand.",
       "trinkets": "Trinket slots",
       "trinketsHint": "Catch-all slots for worn magic items with no better home: ioun stones, figurines, gems.",
       "optional": "Optional slots",
@@ -127,7 +133,7 @@
       "slotLayoutMenu": {
         "name": "Paper Doll Slots",
         "label": "Configure Slots",
-        "hint": "How many ring and trinket slots every character has, and which optional slots are shown."
+        "hint": "How many ring, ranged weapon and trinket slots every character has, and which optional slots are shown."
       },
       "debugLogging": {
         "name": "Debug Logging",

@@ -7,8 +7,9 @@
 Dress your character the way an RPG should let you, in Foundry VTT and the D&D 5e system.
 
 Your character's portrait fills the frame, with a slot for every place gear goes: head, neck, back,
-body, wrists, hands, waist, feet, rings, both hands and a row of trinkets. Drag armour, weapons and
-wondrous items onto it, straight from the inventory. It sits in its own **Paper Doll** tab on the
+body, wrists, hands, waist, feet, rings, both hands, two slung ranged weapons, a light source, a
+musical instrument, artisan's tools and a row of trinkets. Drag armour, weapons, tools and wondrous
+items onto it, straight from the inventory. It sits in its own **Paper Doll** tab on the
 character sheet, or in a window docked beside the sheet that follows it around.
 
 ## Requirements
@@ -23,13 +24,19 @@ character sheet, or in a window docked beside the sheet that follows it around.
 - **It knows boots from cloaks.** D&D 5e files every wondrous item under one type, so the doll reads
   each item the way a player would: *Boots of Speed* go on the feet, a *Cloak of Protection* on the
   back, a *Circlet of Blasting* on the head, even though the system gives that circlet a ring icon.
-  Armour, shields, rings and weapons use the system's own data.
+  Armour, shields, rings, weapons and tools use the system's own data.
 - **It's the same equipment as the sheet.** Putting something on the doll equips it; taking it off
   unequips it. AC, attunement and everything else that reads "equipped" updates as normal. Equip
   something from the inventory tab and it shows up on the doll.
 - **Both hands work the way they should.** A greatsword takes both hands. Equipping one clears the
   off hand, which shows the weapon's outline until you let go. One-handed weapons and shields fit
   either hand they belong in.
+- **Bows slung, blades in hand.** Two ranged slots sit either side of the hands. A longbow equipped
+  from the inventory goes there, and a bow that's slung doesn't tie up your off hand. Drag it into
+  your main hand when you draw it, and then it does.
+- **A kit row for the tools of the trade.** A light source, a musical instrument and a set of
+  artisan's tools each have a slot of their own. A torch or lantern can also go in your off hand.
+  A tinderbox isn't mistaken for a light, even though the system gives it a torch icon.
 - **Drag, click or right-click.**
   - Drag an item from the inventory onto a slot. While you drag, the slots that would take it light
     up and the rest fade.
@@ -70,7 +77,7 @@ These are under **Configure Settings → Module Settings**.
 | Open Docked Doll With Sheets | Off | *Per player.* Opens the dock whenever a character sheet opens. |
 | Strict Slot Matching | Off | When off, any worn accessory fits any accessory slot, so a player can put homebrew gear wherever it makes sense. When on, boots only go on feet, cloaks only on the back, and so on. Armour, shields, weapons and rings follow the rules either way. |
 | Dropping New Items | Gamemaster only | Who may drop an item the character doesn't already carry, from a compendium or the Items sidebar, onto the doll. It's added to the inventory and equipped. |
-| Configure Slots | 2 rings, 4 trinkets | How many ring slots (1–4) and trinket slots (0–8) every doll has, and which optional slots (head, neck, back, wrists, hands, waist, feet) are shown. |
+| Configure Slots | 2 rings, 2 ranged, 4 trinkets | How many ring slots (1–4), ranged weapon slots (0–2) and trinket slots (0–8) every doll has, and which optional slots (head, neck, back, wrists, hands, waist, feet, light source, instrument, artisan's tools) are shown. |
 
 **Hotkey:** **Shift + P** opens or closes the docked doll for your selected token's character, or
 your own character if no token is selected. You can change it under **Configure Controls**.
@@ -81,7 +88,7 @@ your own character if no token is selected. You can change it under **Configure 
 | --- | --- | --- |
 | [Ember](https://foundryvtt.com/packages/ember) | Yes, automatic | Ember skin, and stays out of Ember's character builder. See [Running alongside Ember](#running-alongside-ember). |
 | Alternative character sheets (Tidy 5e Sheet and similar) | Docked doll only | The tab is added only to the D&D 5e system's own sheet. The docked doll is built to work beside any sheet made the standard Foundry way, which includes Tidy 5e. That hasn't been confirmed in a live world yet, because Tidy 5e doesn't support D&D 5e 6.x yet. |
-| Content modules (Player's Handbook, DMG, homebrew) | Yes | Anything using the standard D&D 5e item types can be worn. Unusually named homebrew goes to a sensible slot, and in the default lenient mode can be moved wherever you like. |
+| Content modules (Player's Handbook, DMG, homebrew) | Yes | Anything using the standard D&D 5e item types can be worn or carried. Unusually named homebrew goes to a sensible slot, and in the default lenient mode can be moved wherever you like. |
 | [Simple D&D Character Creator](https://foundryvtt.com/packages/sogrom-dnd5e-character-creator), [Simple D&D Magic Shop](https://foundryvtt.com/packages/sogrom-simple-dnd5e-magic-shop) | Yes | Same look, same Ember skin. |
 
 ## For module developers

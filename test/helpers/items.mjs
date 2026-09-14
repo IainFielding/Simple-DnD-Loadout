@@ -62,3 +62,9 @@ export const cloak = (extra = {}) => make({ name: "Cloak of Protection", subtype
 export const amulet = (extra = {}) => make({ name: "Amulet of Health", subtype: "wondrous", img: "icons/equipment/neck/pendant-faceted-red.webp", attunement: "required", ...extra });
 export const iounStone = (extra = {}) => make({ name: "Ioun Stone of Protection", subtype: "wondrous", img: "icons/commodities/gems/gem-rough-ball-purple.webp", ...extra });
 export const potion = (extra = {}) => make({ name: "Potion of Healing", type: "consumable", subtype: "potion", ...extra });
+export const longbow = (extra = {}) => make({ name: "Longbow", type: "weapon", subtype: "martialR", properties: ["amm", "hvy", "two"], ...extra });
+export const handCrossbow = (extra = {}) => make({ name: "Hand Crossbow", type: "weapon", subtype: "martialR", properties: ["amm", "lgt", "lod"], ...extra });
+export const javelin = (extra = {}) => make({ name: "Javelin", type: "weapon", subtype: "simpleM", properties: ["thr"], ...extra });
+export const torch = (extra = {}) => make({ name: "Torch", type: "consumable", subtype: "trinket", img: "icons/sundries/lights/torch-brown-lit.webp", ...extra });
+export const lute = (extra = {}) => make({ name: "Lute", type: "tool", subtype: "music", ...extra });
+export const smithsTools = (extra = {}) => make({ name: "Smith's Tools", type: "tool", subtype: "art", ...extra });

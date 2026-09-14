@@ -14,9 +14,10 @@
 
 import { DEFAULTS, SETTINGS, clampInt } from "../config.mjs";
 
-/** Most rings and trinkets a GM can configure. Past this the doll stops fitting its panel. */
+/** Most rings, trinkets and ranged slots a GM can configure. Past this the doll stops fitting its panel. */
 export const MAX_RINGS = 4;
 export const MAX_TRINKETS = 8;
+export const MAX_RANGED = 2;
 
 /**
  * Every slot kind, in draw order within its group.
@@ -37,23 +38,38 @@ export const SLOT_KINDS = Object.freeze({
   waist: { group: "right", optional: true, placeholder: "icons/equipment/waist/belt-buckle-square-leather-brown.webp" },
   feet: { group: "right", optional: true, placeholder: "icons/equipment/feet/boots-armored-layered-steel.webp" },
   ring: { group: "right", optional: false, placeholder: "icons/equipment/finger/ring-band-gold.webp" },
+  // Ranged weapons slung and ready, drawn either side of the hands. A bow here is carried, not
+  // gripped, so a two-handed one does not block the off hand. The count (0–2) is a setting.
+  ranged: { group: "hands", optional: true, placeholder: "icons/weapons/bows/shortbow-recurve-bone.webp" },
   mainHand: { group: "hands", optional: false, placeholder: "icons/weapons/swords/shortsword-winged.webp" },
   offHand: { group: "hands", optional: false, placeholder: "icons/equipment/shield/heater-steel-worn.webp" },
+  // The kit row: the tools a character works with, rather than wears.
+  light: { group: "kit", optional: true, placeholder: "icons/sundries/lights/torch-brown-lit.webp" },
+  instrument: { group: "kit", optional: true, placeholder: "icons/tools/instruments/lute-gold-brown.webp" },
+  tools: { group: "kit", optional: true, placeholder: "icons/tools/smithing/hammer-sledge-steel-grey.webp" },
   trinket: { group: "trinkets", optional: true, placeholder: "icons/commodities/gems/gem-rough-ball-purple.webp" }
 });
+
+/** Kinds whose instance count is a setting rather than a checkbox; zero turns them off. */
+export const COUNTED_KINDS = Object.freeze(["ring", "trinket", "ranged"]);
+
+/** Optional kinds governed by a checkbox in the slot settings. */
+export const TOGGLED_KINDS = Object.freeze(Object.keys(SLOT_KINDS).filter(
+  k => SLOT_KINDS[k].optional && !COUNTED_KINDS.includes(k)
+));
 
 /** Kinds a GM may switch off. */
 export const OPTIONAL_KINDS = Object.freeze(Object.keys(SLOT_KINDS).filter(k => SLOT_KINDS[k].optional));
 
-/** The four groups the template lays out, in DOM order. */
-export const SLOT_GROUPS = Object.freeze(["left", "right", "hands", "trinkets"]);
+/** The groups the template lays out, in DOM order. */
+export const SLOT_GROUPS = Object.freeze(["left", "right", "hands", "kit", "trinkets"]);
 
 /**
  * Normalise a stored layout setting. Anything malformed falls back to the default for that
  * field rather than failing the whole doll: a world setting written by an older version, or
  * edited by hand, must never leave a character sheet unable to render.
  * @param {object} [raw]
- * @returns {{rings: number, trinkets: number, disabled: string[]}}
+ * @returns {{rings: number, trinkets: number, ranged: number, disabled: string[]}}
  */
 export function normaliseLayout(raw) {
   const fallback = DEFAULTS[SETTINGS.slotLayout];
@@ -62,12 +78,16 @@ export function normaliseLayout(raw) {
     ? [...new Set(source.disabled.filter(k => OPTIONAL_KINDS.includes(k)))]
     : [...fallback.disabled];
   const trinkets = clampInt(source.trinkets ?? fallback.trinkets, 0, MAX_TRINKETS);
-  // Zero trinkets is the same as disabling them; keep the two in agreement so the settings form
-  // shows what the doll does.
+  // A layout saved before ranged slots existed has no count; it gets the default rather than none.
+  const ranged = clampInt(source.ranged ?? fallback.ranged, 0, MAX_RANGED);
+  // A count of zero is the same as disabling the kind; keep the two in agreement so the settings
+  // form shows what the doll does.
   if ( (trinkets === 0) && !disabled.includes("trinket") ) disabled.push("trinket");
+  if ( (ranged === 0) && !disabled.includes("ranged") ) disabled.push("ranged");
   return {
     rings: clampInt(source.rings ?? fallback.rings, 1, MAX_RINGS),
     trinkets,
+    ranged,
     disabled
   };
 }
@@ -75,16 +95,17 @@ export function normaliseLayout(raw) {
 /**
  * Turn the GM slot form's data into a layout. Unticked checkboxes are absent from form data, so
  * "enabled" arrives as the set of ticked kinds and every other optional kind is disabled. Trinkets
- * are governed by their count rather than a checkbox.
- * @param {{rings?: *, trinkets?: *, enabled?: Record<string, boolean>}} data  Expanded form data.
- * @returns {{rings: number, trinkets: number, disabled: string[]}}
+ * and ranged slots are governed by their counts rather than a checkbox.
+ * @param {{rings?: *, trinkets?: *, ranged?: *, enabled?: Record<string, boolean>}} data  Expanded form data.
+ * @returns {{rings: number, trinkets: number, ranged: number, disabled: string[]}}
  */
 export function layoutFromForm(data = {}) {
   const enabled = data.enabled ?? {};
   return normaliseLayout({
     rings: data.rings,
     trinkets: data.trinkets,
-    disabled: OPTIONAL_KINDS.filter(kind => (kind !== "trinket") && !enabled[kind])
+    ranged: data.ranged,
+    disabled: TOGGLED_KINDS.filter(kind => !enabled[kind])
   });
 }
 
@@ -124,8 +145,8 @@ export function kindOfKey(key) {
  * @returns {SlotInstance[]}
  */
 export function buildSlots(layout) {
-  const { rings, trinkets, disabled } = normaliseLayout(layout);
-  const counts = { ring: rings, trinket: trinkets };
+  const { rings, trinkets, ranged, disabled } = normaliseLayout(layout);
+  const counts = { ring: rings, trinket: trinkets, ranged };
   const slots = [];
   for ( const [kind, def] of Object.entries(SLOT_KINDS) ) {
     if ( disabled.includes(kind) ) continue;
@@ -134,5 +155,24 @@ export function buildSlots(layout) {
       slots.push({ key: slotKey(kind, i, count), kind, index: i, group: def.group, placeholder: def.placeholder });
     }
   }
-  return slots;
+  return orderHands(slots);
+}
+
+/**
+ * Put the ranged slots either side of the hands: `ranged-1, mainHand, offHand, ranged-2`.
+ * Done in the data rather than with CSS `order` so keyboard focus moves through the row in the
+ * order it is drawn.
+ * @param {SlotInstance[]} slots
+ * @returns {SlotInstance[]}
+ */
+function orderHands(slots) {
+  const hands = slots.filter(s => s.group === "hands");
+  const rank = s => {
+    if ( s.kind === "mainHand" ) return 1;
+    if ( s.kind === "offHand" ) return 2;
+    return s.index === 1 ? 0 : 3;
+  };
+  const ordered = [...hands].sort((a, b) => rank(a) - rank(b));
+  let i = 0;
+  return slots.map(s => (s.group === "hands" ? ordered[i++] : s));
 }

@@ -214,7 +214,7 @@ function highlightFor(ctx, uuid) {
   const { layout } = readLayout(ctx.actor);
   const main = layout.cells.find(c => c.kind === "mainHand");
   ctx.root.dataset.pdHighlight = "1";
-  for ( const el of ctx.root.querySelectorAll(".pd-stage .pd-slot, .pd-trinkets .pd-slot") ) {
+  for ( const el of ctx.root.querySelectorAll(".pd-slot") ) {
     const kind = el.dataset.pdKind;
     let ok = accepts(kind, facts, { strict: layout.strict }).ok;
     if ( ok && (kind === "offHand") && main?.item?.twoHanded && (main.item.id !== facts.id) ) ok = false;

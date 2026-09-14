@@ -18,7 +18,7 @@ export const EMBER_ASSETS = [
   "ui/elements/codex-background-dark.webp"
 ];
 
-/** Dress the hero so the screenshot shows every state: rarities, attunement, a blocked hand. */
+/** Dress the hero so the screenshot shows every state: rarities, attunement, a blocked hand, kit. */
 async function dressHero(mod, hero) {
   await resetGear(hero);
   const { equipToSlot, toggleAttunement } = mod.actions;
@@ -29,6 +29,11 @@ async function dressHero(mod, hero) {
   await equipToSlot(hero, gear(hero, "ringProtection"), "ring-1", { notify: false });
   await equipToSlot(hero, gear(hero, "ringWarmth"), "ring-2", { notify: false });
   await equipToSlot(hero, gear(hero, "ioun"), "trinket-1", { notify: false });
+  await equipToSlot(hero, gear(hero, "longbow"), "ranged-1", { notify: false });
+  await equipToSlot(hero, gear(hero, "handCrossbow"), "ranged-2", { notify: false });
+  await equipToSlot(hero, gear(hero, "torch"), "light", { notify: false });
+  await equipToSlot(hero, gear(hero, "lute"), "instrument", { notify: false });
+  await equipToSlot(hero, gear(hero, "smiths"), "tools", { notify: false });
   await toggleAttunement(hero, gear(hero, "cloak"));
   await toggleAttunement(hero, gear(hero, "ringProtection"));
 }

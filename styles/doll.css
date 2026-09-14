@@ -222,9 +222,14 @@
   grid-row: 3;
   display: flex;
   justify-content: center;
-  gap: calc(var(--pd-slot-hand) * 0.6);
+  align-items: flex-end;
+  gap: calc(var(--pd-slot-hand) * 0.3);
   padding-top: var(--pd-gap);
 }
+/* The ranged slots flank the hands, a size down, so the row reads as two weapons in hand with
+   the slung ones either side rather than four equal boxes. */
+.sogrom-doll .pd-hands .pd-slot--ranged:first-child { margin-right: calc(var(--pd-slot-hand) * 0.15); }
+.sogrom-doll .pd-hands .pd-slot--ranged:last-child { margin-left: calc(var(--pd-slot-hand) * 0.15); }
 
 /* ---------------------------------------------- A slot */
 
@@ -245,7 +250,7 @@
 }
 .sogrom-doll .pd-slot--mainHand,
 .sogrom-doll .pd-slot--offHand { --pd-size: var(--pd-slot-hand); }
-.sogrom-doll .pd-trinkets .pd-slot { --pd-size: var(--pd-slot-trinket); }
+.sogrom-doll :is(.pd-trinkets, .pd-kit) .pd-slot { --pd-size: var(--pd-slot-trinket); }
 
 .sogrom-doll .pd-slot-img {
   display: block;
@@ -276,7 +281,7 @@
   opacity: 0;
   pointer-events: none;
 }
-.sogrom-doll .pd-hands .pd-slot-label { opacity: 1; }
+.sogrom-doll :is(.pd-hands, .pd-kit) .pd-slot-label { opacity: 1; }
 .sogrom-doll .pd-hands { padding-bottom: 1.2em; }
 
 /* Filled: the item's rarity is the frame. */
@@ -366,7 +371,29 @@
   50% { box-shadow: 0 0 0 1px var(--pd-open), 0 0 26px var(--pd-open-glow), var(--pd-sheen); }
 }
 
-/* ---------------------------------------------- Trinkets and "also worn" */
+/* ---------------------------------------------- Kit, trinkets and "also worn" */
+
+/* Light, instrument and tools: named, because unlike a trinket each one is a different thing. */
+/* One equal column per slot, so each label has its column's width to itself: in the narrow dock,
+   labels hung off slots spaced by a gap collided ("LIGHT SOURCINSTRUMENT"). */
+.sogrom-doll .pd-kit {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  justify-items: center;
+  padding: var(--pd-gap) var(--pd-gap) calc(var(--pd-gap) + 1.3em);
+  background: var(--pd-panel-grad);
+  border: 1px solid var(--pd-line);
+  box-shadow: var(--pd-sheen);
+}
+.sogrom-doll .pd-kit .pd-slot-label {
+  inset: auto auto calc(-1em - 5px) 50%;
+  translate: -50% 0;
+  width: max-content;
+  max-width: calc(100cqi / 3 - 12px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .sogrom-doll .pd-trinkets {
   display: flex;

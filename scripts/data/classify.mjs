@@ -6,7 +6,8 @@
  * the way a player would, in a fixed order of trust:
  *
  *   1. flag      a kind pinned on the item (another module, a GM macro) — always wins
- *   2. type      what dnd5e's own data says: weapon, armour, shield, ring
+ *   2. type      what dnd5e's own data says: weapon (melee or ranged), armour, shield, ring,
+ *                artisan's tools, musical instrument
  *   3. name      the head noun of the name: "Cloak of Protection" → back
  *   4. icon      the core icon folder: `icons/equipment/feet/…` → feet
  *   5. fallback  held rods and wands to the main hand, clothing to the body, anything else worn
@@ -14,7 +15,9 @@
  *
  * **Name before icon, deliberately.** Surveying the dnd5e 6.0 packs, icons are wrong often enough
  * to matter — Circlet of Blasting and Headband of Intellect both use *ring* art, Cloak of the Manta
- * Ray uses a hood — while the name's head noun was right in every case checked. The icon is still
+ * Ray uses a hood, Tinderbox a lit torch — while the name's head noun was right in every case
+ * checked. Tools are decided by type before either, which matters just as much: Weaver's Tools
+ * carries a cloak icon and Bagpipes a waterskin. The icon is still
  * the better signal for non-English content, which is why it is kept as the next step rather than
  * dropped.
  *
@@ -37,8 +40,23 @@ export const NAME_RULES = Object.freeze([
   ["wrists", /\b(bracers?|bracelets?|vambraces?|armbands?|wristbands?|bangles?)\b/i],
   ["waist", /\b(belts?|girdles?|sashes|sash|cummerbunds?)\b/i],
   ["feet", /\b(boots?|slippers?|shoes?|sandals?|greaves|sabatons?)\b/i],
-  ["ring", /\b(rings?|signets?)\b/i]
+  ["ring", /\b(rings?|signets?)\b/i],
+  ["light", /\b(torch(es)?|lanterns?|lamps?|candles?|driftglobes?|glowstones?|sunrods?)\b/i]
 ]);
+
+/**
+ * Core icon folders outside `icons/equipment/` that still name a slot. Only light sources: the
+ * icon is the one signal a pack's plain "Lamp" and a homebrew "Oil Light" share.
+ */
+export const OTHER_ICON_FOLDERS = Object.freeze({
+  "sundries/lights": "light"
+});
+
+/**
+ * Things drawn with a light-source icon that are not light sources. Tinderbox ships with a torch
+ * icon in dnd5e 6.0; it lights things, it is not a light.
+ */
+const NOT_A_LIGHT = /\b(tinderbox|flint|matches|lamp oil|oil flask)\b/i;
 
 /** Core icon folders under `icons/equipment/` and the kind each one implies. */
 export const ICON_FOLDERS = Object.freeze({
@@ -81,7 +99,12 @@ export function classify(facts) {
   // What the system itself knows.
   if ( facts.type === "weapon" ) {
     if ( UNWIELDABLE_WEAPONS.includes(facts.subtype) ) return null;
-    return { kind: "mainHand", source: "type" };
+    return { kind: facts.ranged ? "ranged" : "mainHand", source: "type" };
+  }
+  if ( facts.type === "tool" ) {
+    if ( facts.subtype === "music" ) return { kind: "instrument", source: "type" };
+    if ( facts.subtype === "art" ) return { kind: "tools", source: "type" };
+    return null;
   }
   if ( facts.type === "equipment" ) {
     if ( facts.subtype === "shield" ) return { kind: "offHand", source: "type" };
@@ -93,7 +116,7 @@ export function classify(facts) {
   if ( byName ) return { kind: byName, source: "name" };
 
   const byIcon = kindFromIcon(facts.img);
-  if ( byIcon ) return { kind: byIcon, source: "icon" };
+  if ( byIcon && !((byIcon === "light") && NOT_A_LIGHT.test(facts.name)) ) return { kind: byIcon, source: "icon" };
 
   if ( ["rod", "wand"].includes(facts.subtype) ) return { kind: "mainHand", source: "fallback" };
   if ( facts.subtype === "clothing" ) return { kind: "body", source: "fallback" };
@@ -124,13 +147,19 @@ export function kindFromName(name) {
 }
 
 /**
- * The kind implied by a core `icons/equipment/<folder>/…` path.
+ * The kind implied by a core icon path: `icons/equipment/<folder>/…`, or one of
+ * {@link OTHER_ICON_FOLDERS}.
  * @param {string} img
  * @returns {string|null}
  */
 export function kindFromIcon(img) {
-  const match = /(?:^|\/)icons\/equipment\/([a-z]+)\//i.exec(String(img ?? ""));
-  return match ? (ICON_FOLDERS[match[1].toLowerCase()] ?? null) : null;
+  const path = String(img ?? "");
+  const match = /(?:^|\/)icons\/equipment\/([a-z]+)\//i.exec(path);
+  if ( match ) return ICON_FOLDERS[match[1].toLowerCase()] ?? null;
+  for ( const [folder, kind] of Object.entries(OTHER_ICON_FOLDERS) ) {
+    if ( new RegExp(`(?:^|/)icons/${folder}/`, "i").test(path) ) return kind;
+  }
+  return null;
 }
 
 /** Whether an item is worn rather than wielded or strapped on as armour. */
@@ -175,6 +204,8 @@ export function accepts(kind, facts, { strict = false } = {}) {
   if ( natural.source === "flag" ) return natural.kind === kind ? allow : refuse;
 
   const isWeapon = facts.type === "weapon";
+  // Kit is carried for use, not worn: it never fills a body or trinket slot.
+  const isKit = ["light", "instrument", "tools"].includes(natural.kind);
   const isShield = (facts.type === "equipment") && (facts.subtype === "shield");
   const isArmor = (facts.type === "equipment") && ARMOR_SUBTYPES.includes(facts.subtype);
 
@@ -188,7 +219,20 @@ export function accepts(kind, facts, { strict = false } = {}) {
       if ( isWeapon ) return facts.twoHanded ? { ok: false, reason: "twoHandedOffHand" } : allow;
       if ( isShield ) return allow;
       if ( natural.kind === "mainHand" ) return allow;
+      // A torch in the off hand is as old as the game; any light source may be held there.
+      if ( natural.kind === "light" ) return allow;
       return (!strict && isHeldImplement(facts)) ? allow : refuse;
+
+    case "ranged":
+      // A ranged weapon either way. Lenient mode also takes thrown weapons: a brace of javelins
+      // slung ready is a ranged weapon in every way that matters at the table.
+      if ( facts.ranged ) return allow;
+      return (!strict && isWeapon && facts.properties.includes("thr")) ? allow : refuse;
+
+    case "light":
+    case "instrument":
+    case "tools":
+      return natural.kind === kind ? allow : refuse;
 
     case "body":
       if ( isArmor ) return allow;
@@ -200,12 +244,12 @@ export function accepts(kind, facts, { strict = false } = {}) {
       return (!strict && (facts.subtype === "ring")) ? allow : refuse;
 
     case "trinket":
-      return (isWearable(facts) && !isArmor && !isShield) ? allow : refuse;
+      return (isWearable(facts) && !isArmor && !isShield && !isKit) ? allow : refuse;
 
     default:
       // head, neck, back, hands, wrists, waist, feet — the accessory slots.
       if ( natural.kind === kind ) return allow;
-      if ( strict ) return refuse;
+      if ( strict || isKit ) return refuse;
       return (isWearable(facts) && !["ring", "rod", "wand"].includes(facts.subtype)) ? allow : refuse;
   }
 }

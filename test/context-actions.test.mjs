@@ -16,7 +16,8 @@ describe("buildDollContext", () => {
     const actor = fakeActor({ items: [{ name: "Boots of Speed", subtype: "wondrous", equipped: true }] });
     const ctx = buildDollContext(actor, { surface: "tab", editable: true });
     expect(ctx.groups.left.map(c => c.kind)).toEqual(["head", "neck", "back", "body", "wrists"]);
-    expect(ctx.groups.hands.map(c => c.key)).toEqual(["mainHand", "offHand"]);
+    expect(ctx.groups.hands.map(c => c.key)).toEqual(["ranged-1", "mainHand", "offHand", "ranged-2"]);
+    expect(ctx.groups.kit.map(c => c.label)).toEqual(["light", "instrument", "tools"].map(k => `${MODULE_ID}.slot.kind.${k}`));
     const feet = ctx.groups.right.find(c => c.key === "feet");
     expect(feet.item.name).toBe("Boots of Speed");
     expect(feet.draggable).toBe(true);

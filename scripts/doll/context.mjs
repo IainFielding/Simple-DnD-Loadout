@@ -34,7 +34,8 @@ export function readLayout(actor) {
     items,
     strict: !!setting(SETTINGS.strictSlots)
   });
-  return { layout, items, counts: { ring: layoutSetting.rings, trinket: layoutSetting.trinkets } };
+  const counts = { ring: layoutSetting.rings, trinket: layoutSetting.trinkets, ranged: layoutSetting.ranged };
+  return { layout, items, counts };
 }
 
 /**

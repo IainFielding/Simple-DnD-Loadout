@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { accepts, classify, kindFromIcon, kindFromName } from "../scripts/data/classify.mjs";
 import { NOT_SLOTTABLE, WEARABLES } from "./fixtures/dnd5e-600-wearables.mjs";
 import {
-  amulet, boots, chainMail, cloak, dagger, greatsword, iounStone, leather, longsword, make, potion, ring, shield
+  amulet, boots, chainMail, cloak, dagger, greatsword, handCrossbow, iounStone, javelin, leather, longbow, longsword,
+  lute, make, potion, ring, shield, smithsTools, torch
 } from "./helpers/items.mjs";
 
 describe("classify: real dnd5e 6.0.0 content", () => {
@@ -52,6 +53,24 @@ describe("classify: trust order", () => {
     expect(classify(make({ name: "Ballista", type: "weapon", subtype: "siege" }))).toBeNull();
   });
 
+  it("ranged weapons go to the ranged slots by type", () => {
+    expect(classify(longbow())).toEqual({ kind: "ranged", source: "type" });
+    expect(classify(javelin())?.kind).toBe("mainHand");
+  });
+
+  it("tools are decided by type, before the name or icon can mislead", () => {
+    expect(classify(make({ name: "Weaver's Tools", type: "tool", subtype: "art", img: "icons/equipment/back/cloak.webp" })))
+      .toEqual({ kind: "tools", source: "type" });
+    expect(classify(make({ name: "Ring of Bells", type: "tool", subtype: "music" }))).toEqual({ kind: "instrument", source: "type" });
+  });
+
+  it("a light-source icon names a light unless the item only starts fires", () => {
+    expect(classify(make({ name: "Oil Light", subtype: "trinket", img: "icons/sundries/lights/lantern-steel.webp" })))
+      .toEqual({ kind: "light", source: "icon" });
+    expect(classify(make({ name: "Tinderbox", subtype: "trinket", img: "icons/sundries/lights/torch-black.webp" }))?.kind)
+      .toBe("trinket");
+  });
+
   it("potions and other pocket consumables are not slottable", () => {
     expect(classify(potion())).toBeNull();
   });
@@ -92,7 +111,11 @@ describe("kindFromIcon", () => {
     expect(kindFromIcon("icons/equipment/finger/ring.webp")).toBe("ring");
   });
 
-  it("ignores icons outside icons/equipment", () => {
+  it("maps the light-source folder outside icons/equipment", () => {
+    expect(kindFromIcon("icons/sundries/lights/lantern-steel.webp")).toBe("light");
+  });
+
+  it("ignores other icons outside icons/equipment", () => {
     expect(kindFromIcon("icons/commodities/gems/gem.webp")).toBeNull();
     expect(kindFromIcon("modules/x/equipment/head/hat.webp")).toBeNull();
     expect(kindFromIcon("")).toBeNull();
@@ -135,6 +158,54 @@ describe("accepts", () => {
     it("armour is not held", () => {
       expect(accepts("mainHand", chainMail()).ok).toBe(false);
       expect(accepts("offHand", chainMail()).ok).toBe(false);
+    });
+  });
+
+  describe("ranged", () => {
+    it("takes ranged weapons, two-handed or not, in both modes", () => {
+      for ( const strict of [false, true] ) {
+        expect(accepts("ranged", longbow(), { strict }).ok).toBe(true);
+        expect(accepts("ranged", handCrossbow(), { strict }).ok).toBe(true);
+      }
+    });
+
+    it("takes thrown melee weapons only when lenient", () => {
+      expect(accepts("ranged", javelin()).ok).toBe(true);
+      expect(accepts("ranged", javelin(), { strict: true }).ok).toBe(false);
+    });
+
+    it("refuses melee weapons and everything else", () => {
+      for ( const item of [longsword(), shield(), boots(), lute()] ) expect(accepts("ranged", item).ok).toBe(false);
+    });
+
+    it("ranged weapons may still be held: a hand crossbow in either hand, a longbow in the main hand", () => {
+      expect(accepts("mainHand", longbow()).ok).toBe(true);
+      expect(accepts("offHand", longbow())).toEqual({ ok: false, reason: "twoHandedOffHand" });
+      expect(accepts("offHand", handCrossbow()).ok).toBe(true);
+    });
+  });
+
+  describe("kit", () => {
+    it("each kit slot takes only its own kind, in both modes", () => {
+      expect(accepts("light", torch()).ok).toBe(true);
+      expect(accepts("instrument", lute()).ok).toBe(true);
+      expect(accepts("tools", smithsTools()).ok).toBe(true);
+      expect(accepts("light", lute()).ok).toBe(false);
+      expect(accepts("instrument", smithsTools()).ok).toBe(false);
+      expect(accepts("tools", boots()).ok).toBe(false);
+    });
+
+    it("a light source can be held in the off hand, even when strict", () => {
+      expect(accepts("offHand", torch()).ok).toBe(true);
+      expect(accepts("offHand", torch(), { strict: true }).ok).toBe(true);
+      expect(accepts("mainHand", torch(), { strict: true }).ok).toBe(false);
+    });
+
+    it("kit never fills a worn slot, even when lenient", () => {
+      for ( const kind of ["head", "neck", "waist", "trinket"] ) {
+        expect(accepts(kind, torch()).ok).toBe(false);
+        expect(accepts(kind, lute()).ok).toBe(false);
+      }
     });
   });
 

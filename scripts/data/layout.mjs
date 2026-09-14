@@ -101,10 +101,16 @@ export function candidateKinds(item) {
   switch ( natural.kind ) {
     case "mainHand":
       return (item.type === "weapon") && !item.twoHanded ? ["mainHand", "offHand"] : ["mainHand"];
+    case "ranged":
+      // Slung first. A character with more bows than ranged slots is holding the next one.
+      return item.twoHanded ? ["ranged", "mainHand"] : ["ranged", "mainHand", "offHand"];
     case "offHand":
     case "body":
     case "ring":
     case "trinket":
+    case "light":
+    case "instrument":
+    case "tools":
       return [natural.kind];
     default:
       // A worn accessory with its own slot taken still counts: park it among the trinkets.

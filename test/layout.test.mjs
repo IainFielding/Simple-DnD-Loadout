@@ -4,7 +4,8 @@ import {
   candidateKinds, candidatesFor, planPlace, planRemove, resolveLayout, snapshot, suggestSlot
 } from "../scripts/data/layout.mjs";
 import {
-  amulet, boots, chainMail, cloak, dagger, greatsword, iounStone, leather, longsword, make, potion, ring, shield
+  amulet, boots, chainMail, cloak, dagger, greatsword, handCrossbow, iounStone, leather, longbow, longsword, lute, make,
+  potion, ring, shield, smithsTools, torch
 } from "./helpers/items.mjs";
 
 /** Resolve a layout from items and assignments on the default doll. */
@@ -119,6 +120,69 @@ describe("resolveLayout", () => {
     expect(a).toEqual(b);
   });
 
+  describe("ranged and kit slots", () => {
+    it("auto-places ranged weapons into the ranged slots, not the hands", () => {
+      const bow = longbow({ equipped: true, sort: 1 });
+      const xbow = handCrossbow({ equipped: true, sort: 2 });
+      const layout = layoutOf([bow, xbow]);
+      expect(itemIn(layout, "ranged-1")).toBe(bow.id);
+      expect(itemIn(layout, "ranged-2")).toBe(xbow.id);
+      expect(itemIn(layout, "mainHand")).toBeNull();
+    });
+
+    it("a slung two-handed bow does not block the off hand", () => {
+      const bow = longbow({ equipped: true });
+      const s = shield({ equipped: true });
+      const layout = layoutOf([bow, s]);
+      expect(itemIn(layout, "ranged-1")).toBe(bow.id);
+      expect(itemIn(layout, "offHand")).toBe(s.id);
+      expect(cell(layout, "offHand").blocked).toBe(false);
+    });
+
+    it("a third ranged weapon is held once the ranged slots are full", () => {
+      const bows = [1, 2, 3].map(n => handCrossbow({ equipped: true, sort: n }));
+      const layout = layoutOf(bows);
+      expect(itemIn(layout, "mainHand")).toBe(bows[2].id);
+    });
+
+    it("a two-handed bow gripped in the main hand blocks the off hand like any two-hander", () => {
+      const bow = longbow({ equipped: true });
+      const layout = layoutOf([bow], { mainHand: bow.id });
+      expect(itemIn(layout, "mainHand")).toBe(bow.id);
+      expect(cell(layout, "offHand").blocked).toBe(true);
+    });
+
+    it("kit lands in its own slots and overflows to Also Worn, never to trinkets", () => {
+      const items = [torch({ equipped: true, sort: 1 }), torch({ equipped: true, sort: 2 }), lute({ equipped: true }), smithsTools({ equipped: true })];
+      const layout = layoutOf(items);
+      expect(itemIn(layout, "light")).toBe(items[0].id);
+      expect(itemIn(layout, "instrument")).toBe(items[2].id);
+      expect(itemIn(layout, "tools")).toBe(items[3].id);
+      expect(layout.unslotted.map(i => i.id)).toEqual([items[1].id]);
+      expect(itemIn(layout, "trinket-1")).toBeNull();
+    });
+
+    it("a torch can be moved from its slot into the off hand", () => {
+      const t = torch({ equipped: true });
+      const plan = planPlace(layoutOf([t]), { targetKey: "offHand", item: t, sourceKey: "light" });
+      expect(plan.assignments.offHand).toBe(t.id);
+      expect(plan.assignments.light).toBeNull();
+    });
+
+    it("equipping a greatsword clears a torch from the off hand", () => {
+      const t = torch({ equipped: true });
+      const g = greatsword();
+      const plan = planPlace(layoutOf([t, g], { offHand: t.id }), { targetKey: "mainHand", item: g });
+      expect(plan.unequip).toEqual([t.id]);
+    });
+
+    it("the API's suggestion for a bow is a free ranged slot", () => {
+      const worn = longbow({ equipped: true });
+      const spare = handCrossbow();
+      expect(suggestSlot(layoutOf([worn, spare]), spare)).toBe("ranged-2");
+    });
+  });
+
   describe("two-handed weapons", () => {
     it("block the off hand and show the weapon as a ghost there", () => {
       const g = greatsword({ equipped: true });
@@ -169,6 +233,17 @@ describe("candidateKinds", () => {
   it("one-handed weapons may go in either hand; two-handed only the main", () => {
     expect(candidateKinds(longsword())).toEqual(["mainHand", "offHand"]);
     expect(candidateKinds(greatsword())).toEqual(["mainHand"]);
+  });
+
+  it("ranged weapons try the ranged slots before the hands", () => {
+    expect(candidateKinds(handCrossbow())).toEqual(["ranged", "mainHand", "offHand"]);
+    expect(candidateKinds(longbow())).toEqual(["ranged", "mainHand"]);
+  });
+
+  it("kit only goes to its own slot", () => {
+    expect(candidateKinds(torch())).toEqual(["light"]);
+    expect(candidateKinds(lute())).toEqual(["instrument"]);
+    expect(candidateKinds(smithsTools())).toEqual(["tools"]);
   });
 
   it("accessories fall back to trinket slots", () => {

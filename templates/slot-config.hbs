@@ -10,6 +10,14 @@
   </div>
 
   <div class="form-group">
+    <label>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.ranged"}}</label>
+    <div class="form-fields">
+      <range-picker name="ranged" value="{{ranged}}" min="0" max="{{maxRanged}}" step="1"></range-picker>
+    </div>
+    <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.rangedHint"}}</p>
+  </div>
+
+  <div class="form-group">
     <label>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.trinkets"}}</label>
     <div class="form-fields">
       <range-picker name="trinkets" value="{{trinkets}}" min="0" max="{{maxTrinkets}}" step="1"></range-picker>
