@@ -1,5 +1,5 @@
 /**
- * GM window: how many ring, ranged and trinket slots every doll has, which optional slots show, and
+ * GM window: how many ring, ranged and trinket slots every loadout has, which optional slots show, and
  * whether the camp clothes group is on.
  *
  * Opened from the module's settings menu. Writes the `slotLayout` world setting, whose `onChange`
@@ -17,7 +17,7 @@ export class SlotConfigApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: `${MODULE_ID}-slot-config`,
     tag: "form",
-    classes: ["sogrom-pd-form", "sogrom-pd-slot-config"],
+    classes: ["sogrom-lo-form", "sogrom-lo-slot-config"],
     position: { width: 460 },
     window: { icon: "fa-solid fa-person", contentClasses: ["standard-form"] },
     form: {

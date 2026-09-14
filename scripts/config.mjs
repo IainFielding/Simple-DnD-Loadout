@@ -1,20 +1,20 @@
 /**
- * Shared constants and small runtime helpers for the Paper Doll.
+ * Shared constants and small runtime helpers for the Loadout.
  *
- * Kept free of Application and DOM concerns so every layer — the pure `data/` logic, the doll
+ * Kept free of Application and DOM concerns so every layer — the pure `data/` logic, the loadout
  * controller, the sheet integration — can import from here without dragging UI in with it. The
  * unit tests import this file under plain Node, which is the practical test of that rule.
  */
 
 /** The module's id. Must match `id` in module.json; `tools/validate-package.mjs` checks it. */
-export const MODULE_ID = "sogrom-simple-dnd5e-paper-doll";
+export const MODULE_ID = "sogrom-simple-dnd5e-loadout";
 
 /**
  * The namespace every hook this module emits is prefixed with. camelCase of the title, as the
  * sibling modules do — `sogrom` alone would be ambiguous across a dozen packages. Changing it is a
  * breaking change for every consumer.
  */
-export const HOOK_PREFIX = "simplePaperDoll";
+export const HOOK_PREFIX = "simpleLoadout";
 
 /** Hooks this module fires. See docs/API.md for payloads. */
 export const HOOKS = Object.freeze({
@@ -71,7 +71,7 @@ export const FLAGS = Object.freeze({
 
 /**
  * Whether the Ember module is active. Ember ships no play sheet of its own for dnd5e — only a
- * character-creation sheet — so under Ember the doll works exactly as anywhere else; it just wears
+ * character-creation sheet — so under Ember the loadout works exactly as anywhere else; it just wears
  * the `sogrom-ember` skin (styles/ember-skin.css) so it reads as part of Ember's world.
  * @returns {boolean}
  */

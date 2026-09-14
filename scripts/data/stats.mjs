@@ -1,5 +1,5 @@
 /**
- * The little readouts under the doll: armour class, attunement, and how loaded down the
+ * The little readouts under the loadout: armour class, attunement, and how loaded down the
  * character is. dnd5e computes all three already; these only shape its numbers for display.
  */
 

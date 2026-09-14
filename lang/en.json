@@ -1,6 +1,6 @@
 {
-  "sogrom-simple-dnd5e-paper-doll": {
-    "title": "Paper Doll",
+  "sogrom-simple-dnd5e-loadout": {
+    "title": "Loadout",
     "slot": {
       "kind": {
         "head": "Head",
@@ -30,7 +30,7 @@
       "empty": "{label}: empty. Click to choose an item, or drop one here.",
       "emptyReadonly": "{label}: empty",
       "filled": "{label}: {item}",
-      "blocked": "Off Hand: gripping {weapon} (two-handed)",
+      "blocked": "{label}: {weapon} needs both hands",
       "conflict": "{item} is in the off hand while {weapon} needs both hands",
       "inert": "Requires attunement",
       "attuned": "Attuned"
@@ -38,8 +38,8 @@
     "reject": {
       "notSlottable": "{item} can't be worn or held.",
       "wrongSlot": "{item} doesn't fit the {slot} slot.",
-      "twoHandedOffHand": "{item} needs both hands. Put it in the Main Hand.",
-      "offHandBlocked": "Both hands are gripping {weapon}. Unequip it first.",
+      "twoHandedOffHand": "{item} needs both hands. Put it in the {main} slot.",
+      "offHandBlocked": "{weapon} in {main} needs both hands. Unequip it first.",
       "unknownSlot": "That slot no longer exists.",
       "emptySlot": "That slot is already empty.",
       "notOwner": "You don't have permission to change {actor}'s equipment.",
@@ -79,11 +79,11 @@
       "created": "{item} added to {actor}'s inventory."
     },
     "dock": {
-      "toggle": "Paper Doll",
-      "title": "{actor}: Paper Doll"
+      "toggle": "Loadout",
+      "title": "{actor}: Loadout"
     },
     "portrait": {
-      "title": "Paper Doll Portrait: {actor}",
+      "title": "Loadout Portrait: {actor}",
       "configure": "Portrait…",
       "src": "Image",
       "srcHint": "Leave blank to use the character's own portrait. A full-body picture looks best.",
@@ -96,11 +96,11 @@
       "reset": "Use Character Portrait"
     },
     "slotConfig": {
-      "title": "Paper Doll Slots",
-      "intro": "Choose which slots every character's paper doll shows. Items already worn in a slot you turn off stay equipped and appear under Also Worn.",
+      "title": "Loadout Slots",
+      "intro": "Choose which slots every character's loadout shows. Items already worn in a slot you turn off stay equipped and appear under Also Worn.",
       "rings": "Ring slots",
       "ranged": "Ranged weapon slots",
-      "rangedHint": "Bows, crossbows and slings carried ready, to the right of the hands. A two-handed bow here doesn't tie up the off hand.",
+      "rangedHint": "A second weapon set to the right of the hands. With two slots, the first is the ranged main hand and the second its off hand: a two-handed bow in the first blocks the second, just as a greatsword blocks the off hand.",
       "trinkets": "Trinket slots",
       "trinketsHint": "Up to five catch-all slots for worn magic items with no better home: ioun stones, figurines, gems. They share a bar with the light source, instrument and tools slots.",
       "camp": "Camp clothes",
@@ -112,22 +112,22 @@
     },
     "settings": {
       "sheetTab": {
-        "name": "Paper Doll Tab",
-        "hint": "Add a Paper Doll tab to the D&D 5e character sheet. Reloads the world when changed."
+        "name": "Loadout Tab",
+        "hint": "Add a Loadout tab to the D&D 5e character sheet. Reloads the world when changed."
       },
       "dockButton": {
-        "name": "Docked Paper Doll Button",
-        "hint": "Add a Paper Doll button to character sheet headers that opens the doll in its own window, docked beside the sheet."
+        "name": "Docked Loadout Button",
+        "hint": "Add a Loadout button to character sheet headers that opens the loadout in its own window, docked beside the sheet."
       },
       "dockSide": {
         "name": "Dock Side",
-        "hint": "Which side of the sheet the docked paper doll prefers. If there isn't room, it uses the other side.",
+        "hint": "Which side of the sheet the docked loadout prefers. If there isn't room, it uses the other side.",
         "left": "Left",
         "right": "Right"
       },
       "autoDock": {
-        "name": "Open Docked Doll With Sheets",
-        "hint": "Open the docked paper doll automatically whenever you open a character sheet."
+        "name": "Open Docked Loadout With Sheets",
+        "hint": "Open the docked loadout automatically whenever you open a character sheet."
       },
       "strictSlots": {
         "name": "Strict Slot Matching",
@@ -135,25 +135,25 @@
       },
       "foreignDrops": {
         "name": "Dropping New Items",
-        "hint": "Who may drop an item the character doesn't already carry (from a compendium or the Items sidebar) onto the paper doll. The item is added to the character's inventory and equipped.",
+        "hint": "Who may drop an item the character doesn't already carry (from a compendium or the Items sidebar) onto the loadout. The item is added to the character's inventory and equipped.",
         "gm": "Gamemaster only",
         "owner": "Anyone who owns the character",
         "none": "Nobody"
       },
       "slotLayoutMenu": {
-        "name": "Paper Doll Slots",
+        "name": "Loadout Slots",
         "label": "Configure Slots",
         "hint": "How many ring, ranged weapon and trinket slots every character has, which optional slots are shown, and whether camp clothes slots are on."
       },
       "debugLogging": {
         "name": "Debug Logging",
-        "hint": "Print Paper Doll diagnostics to your browser console. Only affects you."
+        "hint": "Print Loadout diagnostics to your browser console. Only affects you."
       }
     },
     "keybindings": {
       "toggleDock": {
-        "name": "Toggle Docked Paper Doll",
-        "hint": "Open or close the docked paper doll for your selected token's character, or your assigned character."
+        "name": "Toggle Docked Loadout",
+        "hint": "Open or close the docked loadout for your selected token's character, or your assigned character."
       }
     }
   }

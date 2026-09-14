@@ -2,7 +2,7 @@
  * Check that every localisation key the code and templates ask for actually exists.
  *
  * There is no build step, so a mistyped key is not an error — it renders in the live game as
- * the raw key ("sogrom-simple-dnd5e-paper-doll.slot.hedd"), which looks like a broken
+ * the raw key ("sogrom-simple-dnd5e-loadout.slot.hedd"), which looks like a broken
  * module and is easy to miss in a window with sixty labels on it. This finds them in one pass.
  *
  * Two directions, both worth knowing about:
@@ -19,14 +19,14 @@ import { fileURLToPath } from "node:url";
 import { dirname, extname, join, relative, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const MODULE_ID = "sogrom-simple-dnd5e-paper-doll";
+const MODULE_ID = "sogrom-simple-dnd5e-loadout";
 
 /**
  * Key prefixes built at runtime from a variable, so no static scan can see the leaves. Each
  * entry means "every key under this path is considered used".
  */
 const DYNAMIC_PREFIXES = [
-  // slot.kind.<kind>, from doll/context.mjs#slotLabel over SLOT_KINDS
+  // slot.kind.<kind>, from loadout/context.mjs#slotLabel over SLOT_KINDS
   "slot.kind",
   // reject.<reason>, from accepts()/planPlace()'s reason keys, shown by actions.mjs#notifyRefusal
   "reject",
@@ -63,7 +63,7 @@ const declared = flatten(lang[MODULE_ID] ?? {});
 
 /*
  * Three ways a key is written, and all three have to be recognised:
- *   {{localize "sogrom-simple-dnd5e-paper-doll.foo.bar"}}   templates, fully qualified
+ *   {{localize "sogrom-simple-dnd5e-loadout.foo.bar"}}   templates, fully qualified
  *   t("foo.bar")                                            scripts, via config.mjs#t
  *   `${MODULE_ID}.foo.bar`                                  window titles and the like
  */

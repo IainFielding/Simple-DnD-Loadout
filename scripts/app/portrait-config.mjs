@@ -1,14 +1,14 @@
 /**
- * Per-character portrait for the doll: which picture, how it fills the frame, and which part of a
+ * Per-character portrait for the loadout: which picture, how it fills the frame, and which part of a
  * tall picture stays in view.
  *
  * A DocumentSheetV2, so Foundry handles the permission check (owners only), the form submission
  * and the re-render of everything showing the actor. The values live in one actor flag,
- * `flags[MODULE_ID].portrait`, read by `doll/context.mjs#portraitFor`.
+ * `flags[MODULE_ID].portrait`, read by `loadout/context.mjs#portraitFor`.
  */
 
 import { FLAGS, MODULE_ID, t, tpl } from "../config.mjs";
-import { portraitFor } from "../doll/context.mjs";
+import { portraitFor } from "../loadout/context.mjs";
 
 const { DocumentSheetV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -16,7 +16,7 @@ export class PortraitConfig extends HandlebarsApplicationMixin(DocumentSheetV2) 
 
   /** @override */
   static DEFAULT_OPTIONS = {
-    classes: ["sogrom-pd-form", "sogrom-pd-portrait-config"],
+    classes: ["sogrom-lo-form", "sogrom-lo-portrait-config"],
     sheetConfig: false,
     position: { width: 420 },
     window: { icon: "fa-solid fa-image-portrait", contentClasses: ["standard-form"] },
@@ -65,7 +65,7 @@ export class PortraitConfig extends HandlebarsApplicationMixin(DocumentSheetV2) 
   async _onRender(context, options) {
     await super._onRender(context, options);
     // Live preview: the frame below the fields follows every change before anything is saved.
-    const img = this.element.querySelector(".pd-portrait-preview img");
+    const img = this.element.querySelector(".lo-portrait-preview img");
     const read = () => {
       const data = new foundry.applications.ux.FormDataExtended(this.form).object;
       const flag = foundry.utils.getProperty(foundry.utils.expandObject(data), `flags.${MODULE_ID}.${FLAGS.portrait}`) ?? {};

@@ -1,7 +1,7 @@
 {
-  "id": "sogrom-simple-dnd5e-paper-doll",
-  "title": "Simple D&D Paper Doll",
-  "description": "Dress your D&D 5e character the way an RPG should let you: drag armour, weapons, rings and wondrous items onto a paper doll of your character, right on the character sheet or docked beside it. Knows boots from cloaks, two-handed from one, and what needs attunement.",
+  "id": "sogrom-simple-dnd5e-loadout",
+  "title": "Simple D&D Loadout",
+  "description": "Your D&D 5e character's loadout, the way an RPG shows it: drag armour, weapons, rings, tools and wondrous items into slots around your character's portrait, right on the character sheet or docked beside it. Knows boots from cloaks, two-handed from one, and what needs attunement.",
   "version": "#{VERSION}#",
   "compatibility": {
     "minimum": "14.359",
@@ -35,7 +35,7 @@
   ],
   "styles": [
     "styles/fonts.css",
-    "styles/doll.css",
+    "styles/loadout.css",
     "styles/ember-skin.css"
   ],
   "languages": [

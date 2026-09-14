@@ -1,5 +1,5 @@
 /**
- * The public API, published as `game.modules.get("sogrom-simple-dnd5e-paper-doll").api`.
+ * The public API, published as `game.modules.get("sogrom-simple-dnd5e-loadout").api`.
  *
  * Installed at `init` so another module's `setup` or `ready` handler can rely on it existing.
  * Nothing in here reads world data until called. docs/API.md is the reference; keep the two in
@@ -11,9 +11,9 @@ import { SLOT_KINDS } from "./data/slots.mjs";
 import { classify } from "./data/classify.mjs";
 import { itemFacts } from "./data/item-facts.mjs";
 import { suggestSlot } from "./data/layout.mjs";
-import { readLayout } from "./doll/context.mjs";
-import { equipToSlot, unequipSlot } from "./doll/actions.mjs";
-import { PaperDollDock, canDock } from "./sheet/dock.mjs";
+import { readLayout } from "./loadout/context.mjs";
+import { equipToSlot, unequipSlot } from "./loadout/actions.mjs";
+import { LoadoutDock, canDock } from "./sheet/dock.mjs";
 import { showTab } from "./sheet/tab.mjs";
 
 /** Build the API object. Exported for the tests; {@link registerApi} is what installs it. */
@@ -33,7 +33,7 @@ export function createApi() {
     classify: item => classify(itemFacts(item)),
 
     /**
-     * What an actor's doll shows right now.
+     * What an actor's loadout shows right now.
      * @param {Actor} actor
      * @returns {{slots: {key: string, kind: string, itemId: string|null, pinned: boolean, blocked: boolean}[], unslotted: string[]}}
      */
@@ -53,7 +53,7 @@ export function createApi() {
      * @param {Actor} actor
      * @param {Item} item
      * @param {string} [slotKey]
-     * @returns {Promise<boolean>}  Whether the doll changed.
+     * @returns {Promise<boolean>}  Whether the loadout changed.
      */
     async equip(actor, item, slotKey) {
       let key = slotKey;
@@ -82,20 +82,20 @@ export function createApi() {
     },
 
     /**
-     * Open the docked doll beside an actor's sheet, opening the sheet first if needed.
+     * Open the docked loadout beside an actor's sheet, opening the sheet first if needed.
      * @param {Actor} actor
-     * @returns {Promise<PaperDollDock|null>}
+     * @returns {Promise<LoadoutDock|null>}
      */
     async openDock(actor) {
       const sheet = actor?.sheet;
       // Checked before rendering, so asking for a dock never opens a sheet it cannot attach to.
       if ( !canDock(sheet) ) return null;
       if ( !sheet.rendered ) await sheet.render({ force: true });
-      return PaperDollDock.open(sheet);
+      return LoadoutDock.open(sheet);
     },
 
     /**
-     * Show the Paper Doll tab on an actor's dnd5e sheet.
+     * Show the Loadout tab on an actor's dnd5e sheet.
      * @param {Actor} actor
      * @returns {Promise<void>}
      */

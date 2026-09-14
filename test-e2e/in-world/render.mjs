@@ -1,9 +1,9 @@
 /**
  * Fixtures for screenshots, and the Ember skin's assertions.
  *
- * Nothing here judges how the doll *looks* — that is what the screenshots are for, and a person
+ * Nothing here judges how the loadout *looks* — that is what the screenshots are for, and a person
  * looks at them. What is asserted is everything a screenshot would hide: that the skin class is
- * applied, that each of Ember's files the skin names actually loads, and that the doll never
+ * applied, that each of Ember's files the skin names actually loads, and that the loadout never
  * attaches to Ember's own creation sheet.
  */
 
@@ -18,7 +18,7 @@ export const EMBER_ASSETS = [
   "ui/elements/codex-background-dark.webp"
 ];
 
-/** Dress the hero so the screenshot shows every state: rarities, attunement, a blocked hand, kit. */
+/** Dress the hero so the screenshot shows every state: rarities, attunement, both kinds of blocked hand, kit. */
 async function dressHero(mod, hero) {
   await resetGear(hero);
   const { equipToSlot, toggleAttunement } = mod.actions;
@@ -49,8 +49,8 @@ function tidySheetId() {
 
 /**
  * Dress the hero and open the picture the world is about, for a screenshot:
- * - normally, dnd5e's sheet on the Paper Doll tab with the dock beside it;
- * - with `tidy`, Tidy 5e's sheet with the dock beside it. Tidy's sheet has no Paper Doll tab — the
+ * - normally, dnd5e's sheet on the Loadout tab with the dock beside it;
+ * - with `tidy`, Tidy 5e's sheet with the dock beside it. Tidy's sheet has no Loadout tab — the
  *   tab is only added to dnd5e's own sheet — so the dock is the whole point of that picture.
  * {@link teardown} puts the hero back on dnd5e's sheet.
  * @param {{tidy?: boolean}} [options]
@@ -59,7 +59,7 @@ export async function showcase({ tidy = false } = {}) {
   const mod = await load();
   const hero = game.actors.getName(HERO);
   await closeAll();
-  await game.settings.set("sogrom-simple-dnd5e-paper-doll", "slotLayout", { ...game.settings.get("sogrom-simple-dnd5e-paper-doll", "slotLayout"), camp: true });
+  await game.settings.set("sogrom-simple-dnd5e-loadout", "slotLayout", { ...game.settings.get("sogrom-simple-dnd5e-loadout", "slotLayout"), camp: true });
   await dressHero(mod, hero);
   let sheet;
   const tidyId = tidy ? tidySheetId() : null;
@@ -73,7 +73,7 @@ export async function showcase({ tidy = false } = {}) {
     ({ sheet } = await openTab(hero));
   }
   sheet.setPosition({ left: 560, top: 40, height: 1000 });
-  const dock = await mod.dock.PaperDollDock.open(sheet);
+  const dock = await mod.dock.LoadoutDock.open(sheet);
   await waitFor(() => dock?.rendered, "the dock");
   // Let tooltips' spinners and images settle.
   await new Promise(r => setTimeout(r, 800));
@@ -90,7 +90,7 @@ export async function emberSuite() {
 
     await closeAll();
     const { sheet, root } = await openTab(hero);
-    report.check("the doll wears the Ember skin", root().classList.contains("sogrom-ember"));
+    report.check("the loadout wears the Ember skin", root().classList.contains("sogrom-ember"));
     const ground = getComputedStyle(root()).backgroundImage;
     report.check("…with Ember's codex ground", ground.includes("codex-background-dark"), ground);
 
@@ -103,14 +103,14 @@ export async function emberSuite() {
     await document.fonts.ready;
     report.check("Ember's heading face is available", document.fonts.check('16px "Pirate Scroll"'));
 
-    // A character Ember has not finished building gets Ember's creation sheet. The doll must not
+    // A character Ember has not finished building gets Ember's creation sheet. The loadout must not
     // offer to dock to it, and asking must not open it. (Not rendered here: in a world without the
     // Ember adventure imported, the creation sheet itself cannot draw.)
     const fresh = await Actor.create({ name: "[e2e] Mid-Creation", type: "character" });
     try {
       report.equal("a new character in an Ember world gets Ember's creation sheet", fresh.getFlag("core", "sheetClass"), "ember.EmberCharacterCreationSheet");
-      report.check("…which the doll will not dock to", !mod.dock.canDock(fresh.sheet));
-      const opened = await game.modules.get("sogrom-simple-dnd5e-paper-doll").api.openDock(fresh);
+      report.check("…which the loadout will not dock to", !mod.dock.canDock(fresh.sheet));
+      const opened = await game.modules.get("sogrom-simple-dnd5e-loadout").api.openDock(fresh);
       report.check("…and api.openDock refuses without opening it", opened === null && !fresh.sheet.rendered);
     } finally {
       await fresh.delete();
@@ -121,7 +121,7 @@ export async function emberSuite() {
     report.check("Ember's creation sheet is registered", !!creation);
     if ( creation ) {
       const probe = { document: hero, options: creation.cls.DEFAULT_OPTIONS };
-      report.check("…and the doll will not dock to it", !mod.dock.canDock(probe));
+      report.check("…and the loadout will not dock to it", !mod.dock.canDock(probe));
     }
     await sheet.close();
   } catch ( err ) {
@@ -131,7 +131,7 @@ export async function emberSuite() {
 }
 
 /**
- * The docked doll beside Tidy 5e's character sheet — a sheet this module has no code for. What makes
+ * The docked loadout beside Tidy 5e's character sheet — a sheet this module has no code for. What makes
  * it work is only that Tidy builds on ActorSheetV2, so the header hook and the `position`/`close`
  * events are there. The run's other suites still use dnd5e's own sheet, which Tidy leaves registered.
  */
@@ -156,16 +156,16 @@ export async function tidySuite() {
     report.check("the sheet is Tidy's, not dnd5e's", !(sheet instanceof dnd5e.applications.actor.CharacterActorSheet), sheet.constructor.name);
 
     const controls = [...sheet._headerControlButtons()].map(c => c.action);
-    report.check("Tidy's header offers the Paper Doll control", controls.includes("sogromPaperDoll"), controls.join(", "));
+    report.check("Tidy's header offers the Loadout control", controls.includes("sogromLoadout"), controls.join(", "));
 
-    const dock = await mod.dock.PaperDollDock.open(sheet);
-    await waitFor(() => dock?.rendered && dock.element.querySelector(".sogrom-doll"), "the dock beside Tidy");
+    const dock = await mod.dock.LoadoutDock.open(sheet);
+    await waitFor(() => dock?.rendered && dock.element.querySelector(".sogrom-loadout"), "the dock beside Tidy");
     const gap = sheet.element.getBoundingClientRect().left - dock.element.getBoundingClientRect().right;
     report.check("the dock docks beside Tidy's sheet", Math.abs(gap) <= 2, `gap ${gap}`);
 
     await mod.actions.equipToSlot(hero, gear(hero, "cloak"), "back", { notify: false });
-    await waitFor(() => dock.element.querySelector('.pd-slot[data-pd-slot="back"].is-filled'), "the dock to update");
-    report.check("equipping through the dock's doll updates it beside Tidy", true);
+    await waitFor(() => dock.element.querySelector('.lo-slot[data-lo-slot="back"].is-filled'), "the dock to update");
+    report.check("equipping through the dock's loadout updates it beside Tidy", true);
 
     sheet.setPosition({ left: 820 });
     await new Promise(r => requestAnimationFrame(r));
@@ -173,7 +173,7 @@ export async function tidySuite() {
     report.check("the dock follows Tidy's sheet", Math.abs(moved) <= 2, `gap ${moved}`);
 
     await sheet.close();
-    await waitFor(() => !mod.dock.PaperDollDock.for(sheet), "the dock to close with Tidy's sheet");
+    await waitFor(() => !mod.dock.LoadoutDock.for(sheet), "the dock to close with Tidy's sheet");
     report.check("closing Tidy's sheet closes the dock", true);
   } catch ( err ) {
     report.fail("tidy suite threw", err);
@@ -193,6 +193,6 @@ export async function teardown() {
     await hero.unsetFlag("core", "sheetClass");
     hero._sheet = null;
   }
-  const layout = game.settings.get("sogrom-simple-dnd5e-paper-doll", "slotLayout");
-  if ( layout?.camp ) await game.settings.set("sogrom-simple-dnd5e-paper-doll", "slotLayout", { ...layout, camp: false });
+  const layout = game.settings.get("sogrom-simple-dnd5e-loadout", "slotLayout");
+  if ( layout?.camp ) await game.settings.set("sogrom-simple-dnd5e-loadout", "slotLayout", { ...layout, camp: false });
 }

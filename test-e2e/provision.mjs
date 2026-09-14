@@ -2,7 +2,7 @@
  * One-time (idempotent) setup of the test worlds.
  *
  *   node provision.mjs                   # every world
- *   node provision.mjs paperdoll         # just one
+ *   node provision.mjs loadout         # just one
  *   node provision.mjs --reset           # delete the databases first and rebuild
  *
  * For each world: write the manifest, activate it (Foundry creates the database and a passwordless

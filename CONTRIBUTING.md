@@ -13,12 +13,12 @@ npm run package    # build dist/module.zip exactly as a release would
 ```
 
 To try the module in Foundry, symlink or copy the repository into your
-`Data/modules/` directory as `sogrom-simple-dnd5e-paper-doll`. On Windows a junction needs no
+`Data/modules/` directory as `sogrom-simple-dnd5e-loadout`. On Windows a junction needs no
 elevation: `cd test-e2e && npm run link-module` makes one from the paths in `config.mjs`.
 
 ### The end-to-end harness
 
-`test-e2e/` drives a real Foundry install with a GM and a player client. It is where the doll is
+`test-e2e/` drives a real Foundry install with a GM and a player client. It is where the loadout is
 proved against the things a unit test cannot see: dnd5e actually rendering the tab, a real drop
 event equipping an item without also sorting the inventory, the dock following a sheet as it moves,
 minimises and closes, and the Ember skin's borrowed art actually loading. CI cannot run it, because a
@@ -48,7 +48,7 @@ Foundry must be closed while it runs; it starts its own server against your data
   it to `HOOKS`, firing it through `fireHook()` or `callCancellable()`, and documenting it.
 - The rules of what fits where live in `scripts/data/` and stay pure — no documents, no DOM, no
   Foundry globals beyond `config.mjs`'s helpers — so they can be unit-tested. Every write goes
-  through `scripts/doll/actions.mjs`.
+  through `scripts/loadout/actions.mjs`.
 - A classifier change is checked against `test/fixtures/dnd5e-600-wearables.mjs`, real items from
   the system's packs with the slot a player expects. Add the item that prompted the change.
 - Unit tests cover the changed behaviour where the behaviour is testable outside Foundry.
@@ -165,11 +165,11 @@ To add one:
 3. Add the file to the `languages` array in `module.json`.
 4. Run `npm run check`; `validate:json` will catch a malformed file and `validate:package` a
    language path that does not exist.
-5. Load a world in your language and open a character's Paper Doll tab, the docked doll, the slot
+5. Load a world in your language and open a character's Loadout tab, the docked loadout, the slot
    picker and the Configure Slots window. Long translations are the usual source of layout
    problems, and only looking will find them.
 
 Partial translations are fine — Foundry falls back to English for any key you leave out — so a
-first pass covering the slot names and the doll itself is a welcome pull request on its own. If you
+first pass covering the slot names and the loadout itself is a welcome pull request on its own. If you
 are picking up a language someone else started, say so in the pull request so the work isn't
 duplicated.

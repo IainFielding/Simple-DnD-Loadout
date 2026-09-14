@@ -8,7 +8,7 @@
 /** The docked window's width. Tall and narrow, like the sheet's own sidebar. */
 export const DOCK_WIDTH = 400;
 
-/** Smallest height worth drawing the doll at; below this it floats rather than squashing. */
+/** Smallest height worth drawing the loadout at; below this it floats rather than squashing. */
 export const DOCK_MIN_HEIGHT = 520;
 
 /**

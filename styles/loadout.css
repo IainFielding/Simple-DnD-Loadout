@@ -1,0 +1,689 @@
+/* Simple D&D Loadout
+   =====================
+
+   Every rule is scoped under `.sogrom-loadout` (the loadout itself, on both surfaces), `.sogrom-lo-dock`
+   (the docked window's frame), `.sogrom-lo-tab` (the sheet tab wrapper) or `.sogrom-lo-form` (the
+   two config windows). That scoping is what keeps this sheet out of dnd5e's own sheet styling and
+   the rest of Foundry, so add new selectors beneath one of those roots.
+
+   Theme — "Arcane Midnight", the same token system and values as the Simple D&D Character Creator
+   and the Magic Shop, so the three read as one product. Colour carries one meaning only: warm
+   (brass, --lo-settled) is something committed — an attuned item, a filled pip — and cool (teal,
+   --lo-open) is something still asking for input — the slot you are hovering, a valid drop.
+   Headings are Cinzel, body text Spectral, self-hosted in fonts.css.
+
+   The loadout is a dark display case even on dnd5e's light sheet theme, on purpose: the portrait is
+   the ground everything sits on, and a portrait vignettes into black, not parchment. */
+
+.sogrom-loadout {
+  /* --- Semantic colour ------------------------------------------------ */
+  --lo-settled: #c9a227;
+  --lo-settled-bright: #e3bf4b;
+  --lo-settled-soft: rgba(201, 162, 39, 0.15);
+  --lo-settled-glow: rgba(201, 162, 39, 0.30);
+  --lo-open: #4fb3a8;
+  --lo-open-bright: #6fd0c5;
+  --lo-open-soft: rgba(79, 179, 168, 0.14);
+  --lo-open-glow: rgba(79, 179, 168, 0.40);
+
+  /* --- Surfaces ------------------------------------------------------- */
+  --lo-bg: #15161a;
+  --lo-panel: #212429;
+  --lo-panel-2: #2a2e35;
+  --lo-sunk: #0d0e11;
+  --lo-slot-fill: rgba(13, 14, 17, 0.72);
+  --lo-line: #474d57;
+  --lo-line-2: #656e7b;
+  --lo-text: #d9d5cc;
+  --lo-muted: #9a978f;
+  --lo-bright: #f2eee5;
+  --lo-faint: #767b88;
+  --lo-danger: #ec7082;
+  --lo-vignette: 8, 9, 12;
+
+  /* --- Item rarity: RGB triples, as in the Magic Shop and DM's Toolkit, so one hue can serve
+         as a border (high alpha) and a glow (low alpha). ------------------------------------- */
+  --lo-rarity-none: 101, 110, 123;
+  --lo-rarity-common: 255, 255, 225;
+  --lo-rarity-uncommon: 0, 255, 0;
+  --lo-rarity-rare: 0, 128, 255;
+  --lo-rarity-veryrare: 153, 51, 255;
+  --lo-rarity-legendary: 255, 128, 0;
+  --lo-rarity-artifact: 255, 225, 0;
+
+  /* --- Form ----------------------------------------------------------- */
+  --lo-radius: 0px;
+  --lo-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --lo-panel-grad: linear-gradient(180deg, #2a2e35, #1c1f24);
+  --lo-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --lo-font-heading: 'Cinzel', 'Palatino Linotype', Georgia, serif;
+  --lo-font-body: 'Spectral', 'Palatino Linotype', Georgia, serif;
+
+  /* --- Geometry: scales with the width the loadout is given, so the same markup fits the sheet's
+         tab and the narrower dock. ---------------------------------------------------------- */
+  --lo-slot: clamp(46px, 14cqi, 62px);
+  /* Four of these share the hands row, so it is sized for four across the narrow dock. */
+  --lo-slot-hand: clamp(54px, 15.5cqi, 76px);
+  --lo-slot-trinket: clamp(38px, 10cqi, 48px);
+  --lo-gap: clamp(6px, 1.8cqi, 10px);
+
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lo-gap);
+  min-height: 100%;
+  padding: var(--lo-gap);
+  background: var(--lo-bg);
+  color: var(--lo-text);
+  font-family: var(--lo-font-body);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.sogrom-loadout *,
+.sogrom-loadout *::before,
+.sogrom-loadout *::after { box-sizing: border-box; }
+
+.sogrom-loadout ul { margin: 0; padding: 0; list-style: none; }
+.sogrom-loadout li { margin: 0; }
+.sogrom-loadout img { border: 0; max-width: none; }
+
+.sogrom-loadout :is(h2, h3) {
+  margin: 0;
+  border: 0;
+  font-family: var(--lo-font-heading);
+  font-weight: 600;
+  color: var(--lo-bright);
+  letter-spacing: 0.04em;
+}
+
+/* Foundry and dnd5e style bare buttons (height, background, border, gap). Every button in the loadout
+   is a custom control, so start each from nothing. */
+.sogrom-loadout :is(.lo-slot, .lo-chip, .lo-picker-item, .lo-icon-button, .lo-portrait-config) {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  height: auto;
+  min-height: 0;
+  line-height: 1;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--lo-radius);
+  box-shadow: none;
+  text-shadow: none;
+  gap: 0;
+}
+
+.lo-visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------- The stage: portrait and body slots */
+
+.sogrom-loadout .lo-stage {
+  position: relative;
+  isolation: isolate;
+  flex: 1 0 auto;
+  display: grid;
+  grid-template-columns: var(--lo-slot) 1fr var(--lo-slot);
+  grid-template-rows: auto 1fr auto;
+  column-gap: var(--lo-gap);
+  row-gap: var(--lo-gap);
+  min-height: clamp(460px, 118cqi, 640px);
+  padding: calc(var(--lo-gap) * 1.5);
+  overflow: hidden;
+  border: 1px solid var(--lo-line);
+  background: var(--lo-sunk);
+  box-shadow: var(--lo-sheen);
+}
+
+.sogrom-loadout .lo-portrait {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  margin: 0;
+}
+.sogrom-loadout .lo-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.92;
+}
+.sogrom-loadout .lo-portrait.is-placeholder img {
+  opacity: 0.07;
+  object-fit: contain !important;
+  padding: 18% 22%;
+}
+/* The vignette is what lets slots sit over the picture: dark at the edges where they are, open in
+   the middle where the character is. */
+.sogrom-loadout .lo-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(var(--lo-vignette), 0.88) 0, rgba(var(--lo-vignette), 0) 26%,
+      rgba(var(--lo-vignette), 0) 74%, rgba(var(--lo-vignette), 0.88) 100%),
+    linear-gradient(180deg, rgba(var(--lo-vignette), 0.55) 0, rgba(var(--lo-vignette), 0) 18%,
+      rgba(var(--lo-vignette), 0) 62%, rgba(var(--lo-vignette), 0.95) 100%);
+}
+
+.sogrom-loadout .lo-nameplate {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  text-align: center;
+  padding-inline: calc(var(--lo-slot) * 0.5);
+}
+.sogrom-loadout .lo-name {
+  font-size: clamp(16px, 5cqi, 22px);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sogrom-loadout .lo-portrait-config {
+  position: absolute;
+  top: calc(var(--lo-gap) * 1.5);
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--lo-muted);
+  background: rgba(var(--lo-vignette), 0.6);
+  border: 1px solid var(--lo-line);
+  opacity: 0;
+  transition: opacity 160ms var(--lo-ease), color 160ms var(--lo-ease);
+  cursor: pointer;
+  z-index: 2;
+}
+/* In the dock the name sits top centre, so the button takes the top-right corner — clear of the
+   right column, which is centred vertically, and of the camp group lower down. */
+.sogrom-loadout.lo-surface-dock .lo-portrait-config {
+  left: auto;
+  right: calc(var(--lo-gap) * 1.5);
+  translate: none;
+}
+.sogrom-loadout.lo-surface-dock .lo-nameplate { padding-inline: calc(var(--lo-slot) * 0.75); }
+.sogrom-loadout .lo-stage:hover .lo-portrait-config,
+.sogrom-loadout .lo-portrait-config:focus-visible { opacity: 1; }
+.sogrom-loadout .lo-portrait-config:hover { color: var(--lo-open-bright); border-color: var(--lo-open); }
+
+.sogrom-loadout .lo-column {
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--lo-gap);
+}
+.sogrom-loadout .lo-column--left { grid-column: 1; }
+.sogrom-loadout .lo-column--right { grid-column: 3; }
+
+.sogrom-loadout .lo-hands {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: calc(var(--lo-slot-hand) * 0.22);
+  padding-top: var(--lo-gap);
+}
+/* Weapons in hand on the left, slung ranged weapons on the right, all four the same size, with a
+   wider gap between the pairs so the row reads as two groups of two. */
+.sogrom-loadout .lo-hands .lo-slot--offHand + .lo-slot--ranged { margin-left: calc(var(--lo-slot-hand) * 0.3); }
+
+/* ---------------------------------------------- Camp clothes
+
+   A grid item in the stage's middle column, pinned to the bottom of the body row, just above the
+   hands. The middle column is otherwise empty — the portrait shows through it — so the group takes
+   space no slot uses, and switching camp clothes on moves nothing else. The border is what groups
+   the three; the brass says "set aside" rather than "asking for input". */
+
+.sogrom-loadout .lo-camp {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: end;
+  justify-self: center;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: var(--lo-gap);
+  padding: calc(var(--lo-gap) + 1.1em) var(--lo-gap) var(--lo-gap);
+  background: rgba(var(--lo-vignette), 0.66);
+  border: 1px solid var(--lo-settled);
+  border-radius: var(--lo-radius);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 6px 18px rgba(0, 0, 0, 0.55), var(--lo-sheen);
+  backdrop-filter: blur(2px);
+}
+.sogrom-loadout .lo-camp .lo-slot { --lo-size: var(--lo-slot-trinket); }
+.sogrom-loadout .lo-camp-title {
+  position: absolute;
+  inset: 4px 0 auto;
+  text-align: center;
+  font-family: var(--lo-font-heading);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lo-settled-bright);
+  pointer-events: none;
+}
+.sogrom-loadout .lo-camp-title i { font-size: 9px; margin-right: 2px; }
+
+/* ---------------------------------------------- A slot */
+
+.sogrom-loadout .lo-slot {
+  --lo-size: var(--lo-slot);
+  --lo-rarity: var(--lo-rarity-none);
+  position: relative;
+  display: block;
+  flex: none;
+  width: var(--lo-size);
+  height: var(--lo-size);
+  background: var(--lo-slot-fill);
+  border: 1px solid var(--lo-line-2);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.65), var(--lo-sheen);
+  cursor: pointer;
+  transition: transform 160ms var(--lo-ease), border-color 160ms var(--lo-ease),
+    box-shadow 160ms var(--lo-ease), opacity 160ms var(--lo-ease), filter 160ms var(--lo-ease);
+}
+.sogrom-loadout .lo-hands .lo-slot { --lo-size: var(--lo-slot-hand); }
+.sogrom-loadout .lo-trinkets .lo-slot { --lo-size: var(--lo-slot-trinket); }
+
+.sogrom-loadout .lo-slot-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.sogrom-loadout .lo-slot-img--placeholder {
+  padding: 14%;
+  opacity: 0.3;
+  filter: grayscale(1) brightness(1.5) contrast(0.9);
+}
+
+/* The label rides under the hand slots — they are the two a new player most needs named — and is
+   otherwise left to the tooltip and the accessible name. */
+.sogrom-loadout .lo-slot-label {
+  position: absolute;
+  inset: auto -12px calc(-1em - 5px) -12px;
+  font-family: var(--lo-font-heading);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--lo-muted);
+  text-shadow: 0 1px 3px #000;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+.sogrom-loadout .lo-hands .lo-slot-label { opacity: 1; }
+/* Four labelled slots across the narrow dock: at the tab's tracking "MAIN HAND" and "OFF HAND" ran
+   into each other, so the dock sets them tighter. */
+.sogrom-loadout.lo-surface-dock .lo-hands .lo-slot-label { font-size: 9px; letter-spacing: 0.02em; }
+.sogrom-loadout .lo-hands { padding-bottom: 1.2em; }
+
+/* Filled: the item's rarity is the frame. */
+.sogrom-loadout .lo-slot.is-filled {
+  border-color: rgba(var(--lo-rarity), 0.85);
+  box-shadow: inset 0 0 14px rgba(var(--lo-rarity), 0.28), 0 0 10px rgba(var(--lo-rarity), 0.22), var(--lo-sheen);
+}
+.sogrom-loadout .rarity-common { --lo-rarity: var(--lo-rarity-common); }
+.sogrom-loadout .rarity-uncommon { --lo-rarity: var(--lo-rarity-uncommon); }
+.sogrom-loadout .rarity-rare { --lo-rarity: var(--lo-rarity-rare); }
+.sogrom-loadout .rarity-veryrare { --lo-rarity: var(--lo-rarity-veryrare); }
+.sogrom-loadout .rarity-legendary { --lo-rarity: var(--lo-rarity-legendary); }
+.sogrom-loadout .rarity-artifact { --lo-rarity: var(--lo-rarity-artifact); }
+/* Plain gear keeps a neutral frame rather than glowing ivory. */
+.sogrom-loadout .lo-slot.is-filled.rarity-,
+.sogrom-loadout .lo-slot.is-filled.rarity-common { box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5), var(--lo-sheen); }
+.sogrom-loadout .lo-slot.is-filled.rarity- { border-color: var(--lo-line-2); }
+
+.sogrom-loadout:not(.is-readonly) .lo-slot:hover {
+  transform: translateY(-1px);
+  border-color: var(--lo-open);
+  box-shadow: 0 0 0 1px var(--lo-open-glow), 0 4px 14px rgba(0, 0, 0, 0.6), var(--lo-sheen);
+}
+.sogrom-loadout .lo-slot:focus-visible {
+  outline: 2px solid var(--lo-open-bright);
+  outline-offset: 2px;
+}
+.sogrom-loadout.is-readonly .lo-slot.is-empty { cursor: default; }
+
+/* Worn, but inert until attuned: the picture dims, the badge is hollow. */
+.sogrom-loadout .lo-slot.is-inert .lo-slot-img { filter: grayscale(0.75) brightness(0.7); }
+
+.sogrom-loadout .lo-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  font-size: 11px;
+  line-height: 1;
+  text-shadow: 0 0 3px #000, 0 0 6px #000;
+  pointer-events: none;
+}
+.sogrom-loadout .lo-badge--attuned { color: var(--lo-settled-bright); }
+.sogrom-loadout .lo-badge--inert { color: var(--lo-muted); }
+.sogrom-loadout .lo-badge--conflict { left: 3px; right: auto; color: var(--lo-danger); }
+
+/* The off hand while both hands grip a two-handed weapon: a ghost of the weapon, hatched. */
+.sogrom-loadout .lo-slot.is-blocked {
+  cursor: not-allowed;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 5px, transparent 5px 10px),
+    var(--lo-slot-fill);
+  border-style: dashed;
+}
+.sogrom-loadout .lo-slot-img--ghost {
+  opacity: 0.3;
+  filter: grayscale(0.8);
+  transform: scaleX(-1);
+}
+.sogrom-loadout .lo-slot-lock {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  color: var(--lo-muted);
+}
+.sogrom-loadout .lo-slot.is-conflict { border-color: var(--lo-danger); border-style: solid; }
+
+/* ---------------------------------------------- Drag and drop
+
+   While an item is dragged over (or from) a loadout, every slot says whether it would take it: valid
+   slots glow teal and pulse, the rest recede. The hovered slot lifts. Colour is never the only cue
+   — the invalid slots also fade and desaturate. */
+
+.sogrom-loadout[data-lo-highlight] .lo-slot.is-drop-bad { opacity: 0.35; filter: grayscale(0.7); }
+.sogrom-loadout[data-lo-highlight] .lo-slot.is-drop-ok {
+  border-color: var(--lo-open);
+  box-shadow: 0 0 0 1px var(--lo-open), 0 0 16px var(--lo-open-glow), var(--lo-sheen);
+  animation: lo-pulse 1.4s ease-in-out infinite;
+}
+.sogrom-loadout .lo-slot.is-drop-hover { transform: scale(1.07); }
+.sogrom-loadout .lo-slot.is-drop-hover.is-drop-ok { border-color: var(--lo-open-bright); animation: none; }
+.sogrom-loadout .lo-slot.is-drop-hover.is-drop-bad { border-color: var(--lo-danger); opacity: 0.6; }
+.sogrom-loadout .is-dragging { opacity: 0.45; }
+
+@keyframes lo-pulse {
+  50% { box-shadow: 0 0 0 1px var(--lo-open), 0 0 26px var(--lo-open-glow), var(--lo-sheen); }
+}
+
+/* ---------------------------------------------- The trinket bar and "also worn"
+
+   Light, instrument and tools lead the bar, then the trinkets, all at trinket size. Their faded
+   placeholders — torch, lute, hammer, gems — tell them apart without labels. A wider gap marks where
+   the kit ends and the trinkets begin. At the most there are eight, which fits the dock on one line. */
+
+.sogrom-loadout .lo-trinkets .lo-slot[data-lo-group="kit"] + .lo-slot[data-lo-group="trinkets"] {
+  margin-left: var(--lo-gap);
+}
+
+.sogrom-loadout .lo-trinkets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--lo-gap);
+  padding: var(--lo-gap);
+  background: var(--lo-panel-grad);
+  border: 1px solid var(--lo-line);
+  box-shadow: var(--lo-sheen);
+}
+
+.sogrom-loadout .lo-unslotted {
+  padding: var(--lo-gap);
+  border: 1px solid var(--lo-line);
+  border-left: 3px solid var(--lo-settled);
+  background: var(--lo-panel);
+}
+.sogrom-loadout .lo-subhead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--lo-muted);
+}
+.sogrom-loadout .lo-subhead i { font-size: 10px; opacity: 0.7; }
+.sogrom-loadout .lo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sogrom-loadout .lo-chip {
+  --lo-rarity: var(--lo-rarity-none);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 8px 3px 3px;
+  background: var(--lo-sunk);
+  border: 1px solid rgba(var(--lo-rarity), 0.6);
+  cursor: pointer;
+}
+.sogrom-loadout .lo-chip img { width: 24px; height: 24px; object-fit: cover; }
+.sogrom-loadout .lo-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.sogrom-loadout .lo-chip:hover { border-color: var(--lo-open); }
+.sogrom-loadout .lo-chip:focus-visible { outline: 2px solid var(--lo-open-bright); outline-offset: 1px; }
+
+/* ---------------------------------------------- Stats footer */
+
+.sogrom-loadout .lo-stats {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--lo-gap) * 1.5);
+  padding: 6px var(--lo-gap);
+  background: var(--lo-panel-grad);
+  border: 1px solid var(--lo-line);
+  box-shadow: var(--lo-sheen);
+}
+.sogrom-loadout .lo-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--lo-muted);
+}
+.sogrom-loadout .lo-stat-value {
+  font-family: var(--lo-font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--lo-bright);
+}
+.sogrom-loadout .lo-stat-value--small { font-size: 12px; font-weight: 500; color: var(--lo-muted); white-space: nowrap; }
+.sogrom-loadout .lo-stat--ac i { color: var(--lo-settled); font-size: 16px; }
+
+.sogrom-loadout .lo-pips { display: inline-flex; gap: 5px; padding-inline: 2px; }
+.sogrom-loadout .lo-pip {
+  width: 9px;
+  height: 9px;
+  rotate: 45deg;
+  border: 1px solid var(--lo-settled);
+  background: transparent;
+}
+.sogrom-loadout .lo-pip.is-filled { background: var(--lo-settled); box-shadow: 0 0 6px var(--lo-settled-glow); }
+.sogrom-loadout .lo-pip.is-over { border-color: var(--lo-danger); background: var(--lo-danger); }
+
+.sogrom-loadout .lo-stat--encumbrance { flex: 1; min-width: 0; justify-content: flex-end; }
+.sogrom-loadout .lo-bar {
+  position: relative;
+  flex: 1;
+  max-width: 140px;
+  height: 6px;
+  background: var(--lo-sunk);
+  border: 1px solid var(--lo-line);
+  overflow: hidden;
+}
+.sogrom-loadout .lo-bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--lo-settled); }
+/* Amber between brass and red: a warning that is not yet a problem. */
+.sogrom-loadout .band-encumbered .lo-bar-fill { background: #d9822b; }
+.sogrom-loadout :is(.band-heavy, .band-over) .lo-bar-fill { background: var(--lo-danger); }
+
+/* ---------------------------------------------- The picker drawer */
+
+.sogrom-loadout .lo-picker-host {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.sogrom-loadout .lo-picker {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 78%;
+  pointer-events: auto;
+  background: var(--lo-panel-grad);
+  border-top: 1px solid var(--lo-settled);
+  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.7);
+  animation: lo-rise 220ms var(--lo-ease);
+}
+@keyframes lo-rise { from { translate: 0 30%; opacity: 0; } }
+
+.sogrom-loadout.is-picking :is(.lo-column, .lo-hands, .lo-camp) { opacity: 0.3; filter: grayscale(0.6); }
+
+.sogrom-loadout .lo-picker-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--lo-line);
+}
+.sogrom-loadout .lo-picker-icon { width: 22px; height: 22px; opacity: 0.6; filter: grayscale(1) brightness(1.4); }
+.sogrom-loadout .lo-picker-title { flex: 1; font-size: 15px; }
+.sogrom-loadout .lo-icon-button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--lo-muted);
+  cursor: pointer;
+}
+.sogrom-loadout .lo-icon-button:hover { color: var(--lo-bright); }
+.sogrom-loadout .lo-icon-button:focus-visible { outline: 2px solid var(--lo-open-bright); }
+
+.sogrom-loadout .lo-picker-search {
+  margin: 8px 10px 4px;
+  width: auto;
+  height: 30px;
+  padding: 0 8px;
+  font: inherit;
+  color: var(--lo-text);
+  background: var(--lo-sunk);
+  border: 1px solid var(--lo-line-2);
+  border-radius: var(--lo-radius);
+  box-shadow: none;
+}
+.sogrom-loadout .lo-picker-search::placeholder { color: var(--lo-faint); }
+.sogrom-loadout .lo-picker-search:focus { outline: none; border-color: var(--lo-open); box-shadow: 0 0 0 1px var(--lo-open-glow); }
+
+.sogrom-loadout .lo-picker-list {
+  overflow-y: auto;
+  padding: 4px 10px 10px;
+  display: grid;
+  gap: 4px;
+  scrollbar-width: thin;
+}
+.sogrom-loadout .lo-picker-item {
+  --lo-rarity: var(--lo-rarity-none);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 8px 4px 4px;
+  text-align: left;
+  background: var(--lo-sunk);
+  border: 1px solid var(--lo-line);
+  border-left: 3px solid rgba(var(--lo-rarity), 0.85);
+  cursor: pointer;
+  transition: border-color 140ms var(--lo-ease), background 140ms var(--lo-ease);
+}
+.sogrom-loadout .lo-picker-item img { width: 36px; height: 36px; object-fit: cover; flex: none; }
+.sogrom-loadout .lo-picker-name { flex: 1; min-width: 0; line-height: 1.25; }
+.sogrom-loadout .lo-picker-meta {
+  font-size: 11px;
+  color: var(--lo-muted);
+  white-space: nowrap;
+}
+.sogrom-loadout .lo-picker-attune { color: var(--lo-settled); font-size: 12px; }
+.sogrom-loadout .lo-picker-item:hover,
+.sogrom-loadout .lo-picker-item:focus-visible {
+  outline: none;
+  background: var(--lo-open-soft);
+  border-color: var(--lo-open);
+  border-left-color: rgba(var(--lo-rarity), 1);
+}
+.sogrom-loadout .lo-picker-item.is-worn .lo-picker-name { color: var(--lo-muted); }
+.sogrom-loadout .lo-picker-empty {
+  margin: 0;
+  padding: 16px 12px 20px;
+  text-align: center;
+  font-style: italic;
+  color: var(--lo-muted);
+}
+.sogrom-loadout .lo-picker-list [hidden] { display: none; }
+
+/* ---------------------------------------------- Surfaces */
+
+/* The sheet tab: let the loadout fill the tab body edge to edge. */
+.sogrom-lo-tab.tab { padding: 0; }
+.sogrom-lo-tab .sogrom-loadout { min-height: 100%; }
+
+/* The docked window. While docked it has no header of its own — it is part of the sheet — and
+   squares off the edge that meets the sheet. When there is no room to dock it floats, framed. */
+.sogrom-lo-dock .window-content {
+  padding: 0;
+  overflow-y: auto;
+  background: #15161a;
+}
+.sogrom-lo-dock .sogrom-lo-dock-body,
+.sogrom-lo-dock .sogrom-loadout { min-height: 100%; }
+.sogrom-lo-dock.is-docked .window-header { display: none; }
+.sogrom-lo-dock.is-docked[data-dock-side="left"] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: inset -6px 0 12px -8px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+}
+.sogrom-lo-dock.is-docked[data-dock-side="right"] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  box-shadow: inset 6px 0 12px -8px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+}
+.sogrom-lo-dock[hidden] { display: none !important; }
+
+/* ---------------------------------------------- Config windows */
+
+.sogrom-lo-form .lo-kind-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 4px 12px;
+}
+.sogrom-lo-form .lo-kind-grid .checkbox { display: flex; align-items: center; gap: 6px; }
+.sogrom-lo-form .lo-portrait-preview {
+  margin: 8px auto 0;
+  width: 180px;
+  height: 260px;
+  border: 1px solid var(--color-border, #656e7b);
+  background: #0d0e11;
+  overflow: hidden;
+}
+.sogrom-lo-form .lo-portrait-preview img { width: 100%; height: 100%; border: 0; display: block; }
+
+/* ---------------------------------------------- Motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .sogrom-loadout *,
+  .sogrom-loadout *::before,
+  .sogrom-loadout *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .sogrom-loadout .lo-slot:hover,
+  .sogrom-loadout .lo-slot.is-drop-hover { transform: none; }
+}

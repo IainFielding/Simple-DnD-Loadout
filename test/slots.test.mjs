@@ -107,7 +107,7 @@ describe("layoutFromForm", () => {
 });
 
 describe("buildSlots", () => {
-  it("builds the default doll", () => {
+  it("builds the default loadout", () => {
     const keys = buildSlots().map(s => s.key);
     expect(keys).toEqual([
       "head", "neck", "back", "body", "wrists", "hands", "waist", "feet", "ring-1", "ring-2",

@@ -1,7 +1,7 @@
-# Simple D&D Paper Doll: API reference
+# Simple D&D Loadout: API reference
 
 ```js
-const api = game.modules.get("sogrom-simple-dnd5e-paper-doll").api;
+const api = game.modules.get("sogrom-simple-dnd5e-loadout").api;
 ```
 
 The API is available from `init` onwards. The hook names and API members below are the public
@@ -9,7 +9,7 @@ surface: renaming any of them is a breaking change and will be treated as one.
 
 ## Slots
 
-A **slot kind** is a place on the body. A **slot key** is one concrete slot on a doll. Kinds with
+A **slot kind** is a place on the body. A **slot key** is one concrete slot on a loadout. Kinds with
 several slots number them: `"ring-1"`, `"ring-2"`, `"trinket-3"`. Kinds with a single slot use the
 bare kind as the key.
 
@@ -20,7 +20,7 @@ bare kind as the key.
 | `ring` | 2 (1–4) | Rings |
 | `mainHand` | 1 | Weapons (ranged ones included), rods, wands, held focuses |
 | `offHand` | 1 | Shields, one-handed weapons, held focuses, light sources. Blocked while the main hand holds a two-handed weapon. |
-| `ranged` | 2 (0–2) | Ranged weapons, and thrown weapons unless Strict Slot Matching is on. A two-handed weapon here is slung and does not block the off hand. `ranged-1` and `ranged-2` are drawn to the right of the hands. |
+| `ranged` | 2 (0–2) | Ranged weapons, and thrown weapons unless Strict Slot Matching is on. Drawn to the right of the hands. With two, they are a second hand pair: `ranged-1` is the ranged main hand and `ranged-2` its off hand. A two-handed weapon in `ranged-1` blocks `ranged-2`, can never go in `ranged-2`, and doesn't affect the melee off hand. |
 | `light` | 1 | Light sources: torches, lamps, lanterns, candles |
 | `instrument` | 1 | Musical instruments (`tool` items of the `music` type) |
 | `tools` | 1 | Every other `tool` item: artisan's tools, gaming sets, and untyped kits such as thieves' tools |
@@ -42,7 +42,7 @@ shown, so read `api.layout(actor)` for the keys that actually exist.
 ### Pinning an item to a slot kind
 
 ```js
-await item.setFlag("sogrom-simple-dnd5e-paper-doll", "slot", "neck");
+await item.setFlag("sogrom-simple-dnd5e-loadout", "slot", "neck");
 ```
 
 A pinned kind overrides the classifier. The item lands in that kind by default and fits no other
@@ -59,7 +59,7 @@ returns a camp kind: camp is somewhere a player chooses to pack an item, not whe
 
 ### `layout(actor) → {slots, unslotted}`
 
-What the actor's doll shows right now.
+What the actor's loadout shows right now.
 
 ```js
 {
@@ -68,7 +68,7 @@ What the actor's doll shows right now.
 }
 ```
 
-`pinned` means the player put the item there. `false` means the doll placed an equipped item in its
+`pinned` means the player put the item there. `false` means the loadout placed an equipped item in its
 natural slot automatically.
 
 ### `equip(actor, item, slotKey?) → Promise<boolean>`
@@ -82,21 +82,21 @@ Puts an item the actor owns into a slot, following exactly the rules a player's 
 - The `preEquip` hook can veto.
 
 Without `slotKey`, the item goes to its natural slot, preferring an empty one. Returns whether the
-doll changed. Refusals are silent, with no notification.
+loadout changed. Refusals are silent, with no notification.
 
 ### `unequip(actor, slotKeyOrItem) → Promise<boolean>`
 
 Empties a slot, given its key or the item in it, and unequips the item.
 
-### `openDock(actor) → Promise<PaperDollDock | null>`
+### `openDock(actor) → Promise<LoadoutDock | null>`
 
-Opens the docked doll beside the actor's sheet, opening the sheet first if needed. Returns `null`
+Opens the docked loadout beside the actor's sheet, opening the sheet first if needed. Returns `null`
 without opening anything if the actor's sheet can't have a dock, such as Ember's fullscreen
 creation sheet.
 
 ### `openTab(actor) → Promise<void>`
 
-Shows the Paper Doll tab on the actor's D&D 5e sheet, switching an open sheet to it or opening the
+Shows the Loadout tab on the actor's D&D 5e sheet, switching an open sheet to it or opening the
 sheet on it.
 
 ### `HOOKS`
@@ -109,10 +109,10 @@ Each hook receives a single object.
 
 | Hook | Payload | Cancellable | When |
 | --- | --- | --- | --- |
-| `simplePaperDoll.ready` | `{api, version}` | No | At `ready`, after the sheet integration is installed. |
-| `simplePaperDoll.preEquip` | `{actor, item, slot}` | **Yes.** Return `false` to refuse. | Before a drag, pick or `equip()` writes anything. |
-| `simplePaperDoll.equipped` | `{actor, item, slot}` | No | An item was put in a slot. It also fires for an item swapped into the slot another item came from. |
-| `simplePaperDoll.unequipped` | `{actor, item, slot}` | No | An item was taken out of a slot. |
+| `simpleLoadout.ready` | `{api, version}` | No | At `ready`, after the sheet integration is installed. |
+| `simpleLoadout.preEquip` | `{actor, item, slot}` | **Yes.** Return `false` to refuse. | Before a drag, pick or `equip()` writes anything. |
+| `simpleLoadout.equipped` | `{actor, item, slot}` | No | An item was put in a slot. It also fires for an item swapped into the slot another item came from. |
+| `simpleLoadout.unequipped` | `{actor, item, slot}` | No | An item was taken out of a slot. |
 
 A listener that throws is logged and ignored. A throwing `preEquip` listener doesn't count as a veto.
 
@@ -120,11 +120,11 @@ A listener that throws is logged and ignored. A throwing `preEquip` listener doe
 
 | Where | Shape |
 | --- | --- |
-| `actor.flags["sogrom-simple-dnd5e-paper-doll"].slots` | `{[slotKey]: itemId \| null}`, the player's placements. |
-| `actor.flags["sogrom-simple-dnd5e-paper-doll"].portrait` | `{src, fit: "cover" \| "contain", focus: 0–100}` |
-| `item.flags["sogrom-simple-dnd5e-paper-doll"].slot` | An optional pinned slot kind. |
+| `actor.flags["sogrom-simple-dnd5e-loadout"].slots` | `{[slotKey]: itemId \| null}`, the player's placements. |
+| `actor.flags["sogrom-simple-dnd5e-loadout"].portrait` | `{src, fit: "cover" \| "contain", focus: 0–100}` |
+| `item.flags["sogrom-simple-dnd5e-loadout"].slot` | An optional pinned slot kind. |
 
 `system.equipped` is always the source of truth. The `slots` flag records *where* the player put
-something, and the doll ignores an entry for an item that is no longer equipped. That's why an item
+something, and the loadout ignores an entry for an item that is no longer equipped. That's why an item
 unequipped from the inventory tab and later equipped again returns to its slot. Don't write the flag
 directly: use `equip` and `unequip`, which keep the two in step.

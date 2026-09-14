@@ -24,33 +24,33 @@ function makeSheetClass() {
 }
 
 const spec = {
-  id: "doll",
+  id: "loadout",
   after: "inventory",
-  part: { container: { id: "tabs" }, template: "doll.hbs" },
-  tab: { label: "Doll", icon: "fa-person" }
+  part: { container: { id: "tabs" }, template: "loadout.hbs" },
+  tab: { label: "Loadout", icon: "fa-person" }
 };
 
 describe("injectTab", () => {
   it("inserts the tab and part right after the named sibling", () => {
     const Sheet = makeSheetClass();
     expect(injectTab(Sheet, spec)).toBe(true);
-    expect(Sheet.TABS.map(t => t.tab)).toEqual(["details", "inventory", "doll", "features"]);
-    expect(Object.keys(Sheet.PARTS)).toEqual(["header", "details", "inventory", "doll", "features", "warnings", "tabs"]);
-    expect(Sheet.TABS[2]).toEqual({ tab: "doll", label: "Doll", icon: "fa-person" });
+    expect(Sheet.TABS.map(t => t.tab)).toEqual(["details", "inventory", "loadout", "features"]);
+    expect(Object.keys(Sheet.PARTS)).toEqual(["header", "details", "inventory", "loadout", "features", "warnings", "tabs"]);
+    expect(Sheet.TABS[2]).toEqual({ tab: "loadout", label: "Loadout", icon: "fa-person" });
   });
 
   it("is idempotent", () => {
     const Sheet = makeSheetClass();
     injectTab(Sheet, spec);
     expect(injectTab(Sheet, spec)).toBe(false);
-    expect(Sheet.TABS.filter(t => t.tab === "doll")).toHaveLength(1);
+    expect(Sheet.TABS.filter(t => t.tab === "loadout")).toHaveLength(1);
   });
 
   it("without a sibling, appends the tab and puts the part after the last tab-container part", () => {
     const Sheet = makeSheetClass();
     injectTab(Sheet, { ...spec, after: "nope" });
-    expect(Sheet.TABS.at(-1).tab).toBe("doll");
-    expect(Object.keys(Sheet.PARTS)).toEqual(["header", "details", "inventory", "features", "doll", "warnings", "tabs"]);
+    expect(Sheet.TABS.at(-1).tab).toBe("loadout");
+    expect(Object.keys(Sheet.PARTS)).toEqual(["header", "details", "inventory", "features", "loadout", "warnings", "tabs"]);
   });
 
   it("only changes the class it is given, not a parent's shared statics", () => {
@@ -59,8 +59,8 @@ describe("injectTab", () => {
     class Child extends Base {}
     injectTab(Child, spec);
     expect(Base.TABS).toBe(originalTabs);
-    expect(Base.TABS.some(t => t.tab === "doll")).toBe(false);
-    expect(Child.TABS.some(t => t.tab === "doll")).toBe(true);
+    expect(Base.TABS.some(t => t.tab === "loadout")).toBe(false);
+    expect(Child.TABS.some(t => t.tab === "loadout")).toBe(true);
   });
 
   it("does nothing without a class", () => {
@@ -85,8 +85,8 @@ describe("config helpers", () => {
   });
 
   it("t prefixes the module namespace and formats with data", () => {
-    expect(t("title")).toBe("sogrom-simple-dnd5e-paper-doll.title");
-    expect(t("reject.wrongSlot", { item: "Boots" })).toBe("sogrom-simple-dnd5e-paper-doll.reject.wrongSlot:{\"item\":\"Boots\"}");
+    expect(t("title")).toBe("sogrom-simple-dnd5e-loadout.title");
+    expect(t("reject.wrongSlot", { item: "Boots" })).toBe("sogrom-simple-dnd5e-loadout.reject.wrongSlot:{\"item\":\"Boots\"}");
   });
 
   it("callCancellable: false vetoes, a throwing listener does not", () => {

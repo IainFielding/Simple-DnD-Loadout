@@ -14,7 +14,7 @@ coverage/
 Thumbs.db
 
 # End-to-end harness. The *source* is tracked: it drives a real Foundry install against real
-# content modules and is where the doll is verified against real sheets and documents. It is never
+# content modules and is where the loadout is verified against real sheets and documents. It is never
 # shipped, so being tracked and being released are separate questions. Two things stay out:
 #
 #   config.mjs  absolute paths to one machine's Foundry install and user data

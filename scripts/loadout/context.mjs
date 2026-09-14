@@ -1,8 +1,8 @@
 /**
- * Build what the doll template draws, for one actor.
+ * Build what the loadout template draws, for one actor.
  *
- * Both surfaces — the sheet tab and the docked window — call {@link buildDollContext} and render
- * the same `doll.hbs` partial from it, which is what keeps them identical. Everything that decides
+ * Both surfaces — the sheet tab and the docked window — call {@link buildLoadoutContext} and render
+ * the same `loadout.hbs` partial from it, which is what keeps them identical. Everything that decides
  * *what goes where* is in `data/`; this file only reads the actor, calls that, and dresses the
  * result with labels, tooltips and CSS hooks.
  */
@@ -53,10 +53,10 @@ export function slotLabel(slot, counts = {}) {
  * @param {Actor} actor
  * @param {object} [options]
  * @param {"tab"|"dock"} [options.surface]
- * @param {boolean} [options.editable]  Whether this user may change the doll here.
+ * @param {boolean} [options.editable]  Whether this user may change the loadout here.
  * @returns {object}
  */
-export function buildDollContext(actor, { surface = "tab", editable = actor?.isOwner ?? false } = {}) {
+export function buildLoadoutContext(actor, { surface = "tab", editable = actor?.isOwner ?? false } = {}) {
   const { layout, counts } = readLayout(actor);
 
   const cells = layout.cells.map(cell => dressCell(cell, counts, editable));
@@ -138,7 +138,7 @@ function dressCell(cell, counts, editable) {
   let ariaLabel;
   if ( cell.conflict ) ariaLabel = t("slot.conflict", { item: item.name, weapon: cell.blockedBy.name });
   else if ( item ) ariaLabel = t("slot.filled", { label, item: item.name });
-  else if ( cell.blocked ) ariaLabel = t("slot.blocked", { weapon: cell.blockedBy.name });
+  else if ( cell.blocked ) ariaLabel = t("slot.blocked", { label, weapon: cell.blockedBy.name });
   else if ( editable ) ariaLabel = t("slot.empty", { label });
   else ariaLabel = t("slot.emptyReadonly", { label });
   // The sun badge is decoration; say the same thing in words for anyone not seeing it.
@@ -157,7 +157,7 @@ function dressCell(cell, counts, editable) {
     ghost: cell.blocked && !cell.item ? cell.blockedBy.img : null,
     conflict: cell.conflict,
     // Carried per cell rather than read from `@root`: inside the sheet tab `@root` is the *sheet's*
-    // context, whose `editable` means "edit mode", not "may change this doll".
+    // context, whose `editable` means "edit mode", not "may change this loadout".
     draggable: editable && !!item,
     ariaLabel,
     // An item's rich dnd5e card on hover; an empty slot just names itself.

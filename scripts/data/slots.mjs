@@ -1,5 +1,5 @@
 /**
- * The paper doll's slots: what kinds exist, how many of each, and where they are drawn.
+ * The loadout's slots: what kinds exist, how many of each, and where they are drawn.
  *
  * A slot *kind* ("ring") is a category of body location. A slot *instance* ("ring-2") is one
  * concrete place an item can sit, with a stable key that is what gets stored on the actor. Kinds
@@ -14,7 +14,7 @@
 
 import { DEFAULTS, SETTINGS, clampInt } from "../config.mjs";
 
-/** Most rings, trinkets and ranged slots a GM can configure. Past this the doll stops fitting its panel. */
+/** Most rings, trinkets and ranged slots a GM can configure. Past this the loadout stops fitting its panel. */
 export const MAX_RINGS = 4;
 // Five trinkets plus light, instrument and tools make eight on one bar, which is what still fits
 // the docked window's width on a single line.
@@ -24,7 +24,7 @@ export const MAX_RANGED = 2;
 /**
  * Every slot kind, in draw order within its group.
  *
- * `group` picks the column of the doll the slot is drawn in. `placeholder` is a core Foundry icon
+ * `group` picks the column of the loadout the slot is drawn in. `placeholder` is a core Foundry icon
  * (shipped with every install under `icons/`) shown faded while the slot is empty, so a player
  * can tell a glove slot from a boot slot at a glance without reading a label. `optional` kinds
  * can be switched off by the GM; the four that carry the game's mechanics — body armour, both
@@ -40,8 +40,9 @@ export const SLOT_KINDS = Object.freeze({
   waist: { group: "right", optional: true, placeholder: "icons/equipment/waist/belt-buckle-square-leather-brown.webp" },
   feet: { group: "right", optional: true, placeholder: "icons/equipment/feet/boots-armored-layered-steel.webp" },
   ring: { group: "right", optional: false, placeholder: "icons/equipment/finger/ring-band-gold.webp" },
-  // Ranged weapons slung and ready, drawn to the right of the hands. A bow here is carried, not
-  // gripped, so a two-handed one does not block the off hand. The count (0–2) is a setting.
+  // Ranged weapons, drawn to the right of the hands. With two they are a second weapon set, as in
+  // Baldur's Gate 3: ranged-1 the main hand, ranged-2 the off hand, with the same two-handed rule as
+  // the melee pair and independent of it (see layout.mjs#handPairs). The count (0–2) is a setting.
   ranged: { group: "hands", optional: true, placeholder: "icons/weapons/bows/shortbow-recurve-bone.webp" },
   mainHand: { group: "hands", optional: false, placeholder: "icons/weapons/swords/shortsword-winged.webp" },
   offHand: { group: "hands", optional: false, placeholder: "icons/equipment/shield/heater-steel-worn.webp" },
@@ -88,7 +89,7 @@ export const SLOT_GROUPS = Object.freeze(["left", "right", "hands", "kit", "trin
 
 /**
  * Normalise a stored layout setting. Anything malformed falls back to the default for that
- * field rather than failing the whole doll: a world setting written by an older version, or
+ * field rather than failing the whole loadout: a world setting written by an older version, or
  * edited by hand, must never leave a character sheet unable to render.
  * @param {object} [raw]
  * @returns {{rings: number, trinkets: number, ranged: number, camp: boolean, disabled: string[]}}
@@ -103,7 +104,7 @@ export function normaliseLayout(raw) {
   // A layout saved before ranged slots existed has no count; it gets the default rather than none.
   const ranged = clampInt(source.ranged ?? fallback.ranged, 0, MAX_RANGED);
   // A count of zero is the same as disabling the kind; keep the two in agreement so the settings
-  // form shows what the doll does.
+  // form shows what the loadout does.
   if ( (trinkets === 0) && !disabled.includes("trinket") ) disabled.push("trinket");
   if ( (ranged === 0) && !disabled.includes("ranged") ) disabled.push("ranged");
   return {
@@ -165,7 +166,7 @@ export function kindOfKey(key) {
  */
 
 /**
- * Expand a layout setting into the ordered list of slot instances the doll draws.
+ * Expand a layout setting into the ordered list of slot instances the loadout draws.
  * @param {object} [layout]  The `slotLayout` setting; normalised here.
  * @returns {SlotInstance[]}
  */

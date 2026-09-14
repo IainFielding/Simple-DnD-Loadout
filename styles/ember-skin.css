@@ -1,6 +1,6 @@
 /* Ember skin — applied when the Ember module is active.
 
-   The doll gets the `sogrom-ember` class from doll/context.mjs (`ember: emberActive()`) whenever
+   The loadout gets the `sogrom-ember` class from loadout/context.mjs (`ember: emberActive()`) whenever
    Ember is enabled, and this sheet re-themes it to Ember's look: translucent near-black panels over
    Ember's dark codex paper, parchment text, warm ember red as the live accent, parchment gold for
    "settled", and Ember's own faces (Pirate Scroll headings, Vollkorn body). The token values are
@@ -8,7 +8,7 @@
    still read as one product inside an Ember world.
 
    Ember ships no dnd5e play sheet of its own — only a fullscreen character-creation sheet, which
-   the doll never attaches to — so in an Ember world the doll sits on dnd5e's ordinary character
+   the loadout never attaches to — so in an Ember world the loadout sits on dnd5e's ordinary character
    sheet and beside it. Nothing about behaviour changes; only the look.
 
    Two rules of the road, shared with the sibling skins:
@@ -25,92 +25,92 @@
    renamed file in one of its releases breaks a rule here silently. Add to this list, and to
    `EMBER_ASSETS` in test-e2e/in-world/render.mjs, whenever you add a URL.
 
-     ui/elements/codex-background-dark.webp      the doll's ground and the dock's window */
+     ui/elements/codex-background-dark.webp      the loadout's ground and the dock's window */
 
-.sogrom-doll.sogrom-ember {
-  --pd-bg: rgba(11, 10, 19, 0.50);
-  --pd-sunk: rgba(7, 6, 13, 0.70);
-  --pd-panel: rgba(23, 19, 30, 0.72);
-  --pd-panel-2: rgba(33, 27, 41, 0.80);
-  --pd-slot-fill: rgba(11, 10, 19, 0.70);
+.sogrom-loadout.sogrom-ember {
+  --lo-bg: rgba(11, 10, 19, 0.50);
+  --lo-sunk: rgba(7, 6, 13, 0.70);
+  --lo-panel: rgba(23, 19, 30, 0.72);
+  --lo-panel-2: rgba(33, 27, 41, 0.80);
+  --lo-slot-fill: rgba(11, 10, 19, 0.70);
 
-  --pd-line: #483d53;
-  --pd-line-2: #6c5c7d;
+  --lo-line: #483d53;
+  --lo-line-2: #6c5c7d;
 
-  --pd-text: #f5eadf;
-  --pd-muted: #9f8475;
-  --pd-bright: #fffbf0;
-  --pd-faint: #8a7366;
-  --pd-danger: #eb4a58;
-  --pd-vignette: 11, 10, 19;
+  --lo-text: #f5eadf;
+  --lo-muted: #9f8475;
+  --lo-bright: #fffbf0;
+  --lo-faint: #8a7366;
+  --lo-danger: #eb4a58;
+  --lo-vignette: 11, 10, 19;
 
   /* settled = Ember's ridge parchment; open = Ember's own --color-active. As in the sibling skins,
      these separate mostly by saturation rather than value, so every state that uses them also
      carries a second cue: the pulse and lift on a valid drop, fading on an invalid one, the badge
      shape on attunement. Do not remove those cues while this skin exists. */
-  --pd-settled: #d0b8a3;
-  --pd-settled-bright: #f0dab9;
-  --pd-settled-soft: rgba(208, 184, 163, 0.16);
-  --pd-settled-glow: rgba(208, 184, 163, 0.32);
-  --pd-open: #ff6b6b;
-  --pd-open-bright: #ff9a9a;
-  --pd-open-soft: rgba(255, 107, 107, 0.16);
-  --pd-open-glow: rgba(255, 107, 107, 0.38);
+  --lo-settled: #d0b8a3;
+  --lo-settled-bright: #f0dab9;
+  --lo-settled-soft: rgba(208, 184, 163, 0.16);
+  --lo-settled-glow: rgba(208, 184, 163, 0.32);
+  --lo-open: #ff6b6b;
+  --lo-open-bright: #ff9a9a;
+  --lo-open-soft: rgba(255, 107, 107, 0.16);
+  --lo-open-glow: rgba(255, 107, 107, 0.38);
 
-  --pd-sheen: inset 0 1px 0 rgba(255, 251, 240, 0.05);
-  --pd-panel-grad: linear-gradient(180deg, rgba(29, 24, 38, 0.85), rgba(18, 14, 25, 0.85));
-  --pd-radius: 6px;
-  --pd-font-heading: "Pirate Scroll", "Vollkorn", serif;
-  --pd-font-body: "Vollkorn", "Palatino Linotype", Georgia, serif;
+  --lo-sheen: inset 0 1px 0 rgba(255, 251, 240, 0.05);
+  --lo-panel-grad: linear-gradient(180deg, rgba(29, 24, 38, 0.85), rgba(18, 14, 25, 0.85));
+  --lo-radius: 6px;
+  --lo-font-heading: "Pirate Scroll", "Vollkorn", serif;
+  --lo-font-body: "Vollkorn", "Palatino Linotype", Georgia, serif;
 
   background: url("../../ember/ui/elements/codex-background-dark.webp") repeat center #0b0a13;
   scrollbar-color: #85715c transparent;
 }
 
-.sogrom-pd-dock:has(.sogrom-ember) .window-content {
+.sogrom-lo-dock:has(.sogrom-ember) .window-content {
   background: url("../../ember/ui/elements/codex-background-dark.webp") repeat center #0b0a13;
 }
-.sogrom-pd-dock:has(.sogrom-ember) .window-header {
+.sogrom-lo-dock:has(.sogrom-ember) .window-header {
   background: linear-gradient(180deg, #17131e, #0b0a13);
 }
 
 /* The stage keeps a faint warm glow rising from the bottom, as Ember's fullscreen windows do. */
-.sogrom-doll.sogrom-ember .pd-stage {
+.sogrom-loadout.sogrom-ember .lo-stage {
   background:
     linear-gradient(to bottom, transparent 70%, rgba(178, 50, 53, 0.18) 100%),
     rgba(7, 6, 13, 0.55);
 }
 
 /* Pirate Scroll is a display face with no bold weights; heavy tracking fights its hand-drawn look. */
-.sogrom-doll.sogrom-ember :is(h2, h3),
-.sogrom-doll.sogrom-ember .pd-stat-value {
+.sogrom-loadout.sogrom-ember :is(h2, h3),
+.sogrom-loadout.sogrom-ember .lo-stat-value {
   font-weight: 400;
   letter-spacing: 0.02em;
 }
-.sogrom-doll.sogrom-ember .pd-name { font-size: clamp(20px, 6.5cqi, 28px); }
-.sogrom-doll.sogrom-ember .pd-slot-label { font-family: var(--pd-font-body); text-transform: none; letter-spacing: 0; font-size: 12px; }
+.sogrom-loadout.sogrom-ember .lo-name { font-size: clamp(20px, 6.5cqi, 28px); }
+.sogrom-loadout.sogrom-ember .lo-slot-label { font-family: var(--lo-font-body); text-transform: none; letter-spacing: 0; font-size: 12px; }
 
 /* Slots take a small corner rather than the token's 6px at trinket size, where the rounding would
    crop the icon and thin the rarity frame at the turn. */
-.sogrom-doll.sogrom-ember :is(.pd-trinkets, .pd-camp) .pd-slot { border-radius: 4px; }
-.sogrom-doll.sogrom-ember .pd-camp-title { font-family: var(--pd-font-body); letter-spacing: 0.04em; font-size: 11px; }
-.sogrom-doll.sogrom-ember .pd-slot-img { border-radius: inherit; }
+.sogrom-loadout.sogrom-ember :is(.lo-trinkets, .lo-camp) .lo-slot { border-radius: 4px; }
+.sogrom-loadout.sogrom-ember .lo-camp-title { font-family: var(--lo-font-body); letter-spacing: 0.04em; font-size: 11px; }
+.sogrom-loadout.sogrom-ember .lo-slot-img { border-radius: inherit; }
 
 /* Attunement pips are parchment rings rather than brass diamonds, matching Ember's round crests.
    Ember's own BlockActorRing art was tried here and dropped: at pip size its band is a pixel wide
    and the pips read as specks. */
-.sogrom-doll.sogrom-ember .pd-pip {
+.sogrom-loadout.sogrom-ember .lo-pip {
   width: 11px;
   height: 11px;
   rotate: none;
   border-radius: 50%;
-  border: 1.5px solid var(--pd-settled);
+  border: 1.5px solid var(--lo-settled);
 }
-.sogrom-doll.sogrom-ember .pd-pip.is-filled {
-  background: var(--pd-settled-bright);
-  box-shadow: 0 0 6px var(--pd-settled-glow);
+.sogrom-loadout.sogrom-ember .lo-pip.is-filled {
+  background: var(--lo-settled-bright);
+  box-shadow: 0 0 6px var(--lo-settled-glow);
 }
-.sogrom-doll.sogrom-ember .pd-pip.is-over { border-color: var(--pd-danger); background: var(--pd-danger); }
+.sogrom-loadout.sogrom-ember .lo-pip.is-over { border-color: var(--lo-danger); background: var(--lo-danger); }
 
-.sogrom-doll.sogrom-ember .pd-picker { border-top-color: var(--pd-settled); }
-.sogrom-doll.sogrom-ember :is(.band-heavy, .band-over) .pd-bar-fill { background: linear-gradient(90deg, #c93f4b, #e04e4e); }
+.sogrom-loadout.sogrom-ember .lo-picker { border-top-color: var(--lo-settled); }
+.sogrom-loadout.sogrom-ember :is(.band-heavy, .band-over) .lo-bar-fill { background: linear-gradient(90deg, #c93f4b, #e04e4e); }

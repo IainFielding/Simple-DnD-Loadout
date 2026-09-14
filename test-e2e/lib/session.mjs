@@ -4,7 +4,7 @@
  * Playwright's only job here is to *be a client*: launch Chromium, log in, and hand back a page
  * whose JS context has `game`, `CONFIG`, `dnd5e` and the live documents. Assertions run inside
  * that context via {@link Session#inWorld}, importing the module under test directly — driving
- * Foundry through its own objects is far more stable than through its DOM, and where the doll's
+ * Foundry through its own objects is far more stable than through its DOM, and where the loadout's
  * DOM *is* the thing under test (drops, the picker, the dock), the in-world suites dispatch real
  * events at real elements rather than steering a mouse from out here.
  *
@@ -40,7 +40,7 @@ const KNOWN_NOISE = [
   },
   {
     // Provoked on purpose by the permissions suite, which tries to equip on a character the
-    // player does not own to prove the doll refuses.
+    // player does not own to prove the loadout refuses.
     pattern: /lacks permission to update Actor/,
     why: "the player suite deliberately attempts a forbidden write"
   }

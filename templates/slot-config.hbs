@@ -1,42 +1,42 @@
 {{!-- GM slot layout. See scripts/app/slot-config.mjs. --}}
-<div class="pd-form-body">
-  <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.intro"}}</p>
+<div class="lo-form-body">
+  <p class="hint">{{localize "sogrom-simple-dnd5e-loadout.slotConfig.intro"}}</p>
 
   <div class="form-group">
-    <label>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.rings"}}</label>
+    <label>{{localize "sogrom-simple-dnd5e-loadout.slotConfig.rings"}}</label>
     <div class="form-fields">
       <range-picker name="rings" value="{{rings}}" min="1" max="{{maxRings}}" step="1"></range-picker>
     </div>
   </div>
 
   <div class="form-group">
-    <label>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.ranged"}}</label>
+    <label>{{localize "sogrom-simple-dnd5e-loadout.slotConfig.ranged"}}</label>
     <div class="form-fields">
       <range-picker name="ranged" value="{{ranged}}" min="0" max="{{maxRanged}}" step="1"></range-picker>
     </div>
-    <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.rangedHint"}}</p>
+    <p class="hint">{{localize "sogrom-simple-dnd5e-loadout.slotConfig.rangedHint"}}</p>
   </div>
 
   <div class="form-group">
-    <label>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.trinkets"}}</label>
+    <label>{{localize "sogrom-simple-dnd5e-loadout.slotConfig.trinkets"}}</label>
     <div class="form-fields">
       <range-picker name="trinkets" value="{{trinkets}}" min="0" max="{{maxTrinkets}}" step="1"></range-picker>
     </div>
-    <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.trinketsHint"}}</p>
+    <p class="hint">{{localize "sogrom-simple-dnd5e-loadout.slotConfig.trinketsHint"}}</p>
   </div>
 
   <fieldset>
-    <legend>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.camp"}}</legend>
+    <legend>{{localize "sogrom-simple-dnd5e-loadout.slotConfig.camp"}}</legend>
     <label class="checkbox">
       <input type="checkbox" name="camp" {{#if camp}}checked{{/if}}>
-      {{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.campEnable"}}
+      {{localize "sogrom-simple-dnd5e-loadout.slotConfig.campEnable"}}
     </label>
-    <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.campHint"}}</p>
+    <p class="hint">{{localize "sogrom-simple-dnd5e-loadout.slotConfig.campHint"}}</p>
   </fieldset>
 
   <fieldset>
-    <legend>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.optional"}}</legend>
-    <div class="pd-kind-grid">
+    <legend>{{localize "sogrom-simple-dnd5e-loadout.slotConfig.optional"}}</legend>
+    <div class="lo-kind-grid">
       {{#each optional}}
       <label class="checkbox">
         <input type="checkbox" name="enabled.{{kind}}" {{#if enabled}}checked{{/if}}>

@@ -34,7 +34,7 @@ export function source({
     type,
     img,
     sort,
-    flags: slot ? { "sogrom-simple-dnd5e-paper-doll": { slot } } : {},
+    flags: slot ? { "sogrom-simple-dnd5e-loadout": { slot } } : {},
     system: {
       type: { value: subtype },
       properties: new Set(properties),

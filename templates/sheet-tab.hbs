@@ -1,9 +1,9 @@
 {{!--
-  The Paper Doll tab body on the dnd5e character sheet. dnd5e renders it as a PART inside the
+  The Loadout tab body on the dnd5e character sheet. dnd5e renders it as a PART inside the
   sheet's tab container (scripts/sheet/tab.mjs), so the outer <section> follows the system's own
   tab-part shape exactly: `tab`, the active class, and the data-tab/data-group pair its tab
-  switching reads. `doll` is added to the part context by the dnd5e.prepareSheetContext hook.
+  switching reads. `loadout` is added to the part context by the dnd5e.prepareSheetContext hook.
 --}}
-<section class="tab sogrom-pd-tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}">
-  {{#with doll}}{{> sogrom-pd-doll}}{{/with}}
+<section class="tab sogrom-lo-tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+  {{#with loadout}}{{> sogrom-lo-loadout}}{{/with}}
 </section>

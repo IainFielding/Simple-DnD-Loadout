@@ -1,25 +1,25 @@
 /**
- * The Paper Doll tab on dnd5e's own character sheet.
+ * The Loadout tab on dnd5e's own character sheet.
  *
  * Three pieces, all through extension points dnd5e provides:
  *
  * 1. `injectTab` adds a TABS entry and a PARTS entry to `CharacterActorSheet` at init.
  * 2. `dnd5e.prepareSheetContext` — the hook dnd5e fires while preparing each part — supplies our
  *    part's context, so the tab renders with the rest of the sheet.
- * 3. `renderCharacterActorSheet` binds the freshly rendered doll after each render.
+ * 3. `renderCharacterActorSheet` binds the freshly rendered loadout after each render.
  *
  * Only the system's character sheet gets the tab. Other character sheets (Tidy 5e and friends)
- * still get the docked doll through the header button, which works with any framed sheet.
+ * still get the docked loadout through the header button, which works with any framed sheet.
  */
 
 import { MODULE_ID, log, tpl } from "../config.mjs";
-import { buildDollContext } from "../doll/context.mjs";
-import { bindDoll } from "../doll/controller.mjs";
+import { buildLoadoutContext } from "../loadout/context.mjs";
+import { bindLoadout } from "../loadout/controller.mjs";
 import { PortraitConfig } from "../app/portrait-config.mjs";
 import { injectTab } from "./tab-inject.mjs";
 
 /** The tab's id, on the sheet and in `sheet.changeTab`. */
-export const TAB_ID = "sogromPaperDoll";
+export const TAB_ID = "sogromLoadout";
 
 /**
  * Install the tab. Safe to call once at init; a no-op when dnd5e's sheet class is missing.
@@ -45,13 +45,13 @@ export function installSheetTab() {
 
   Hooks.on("dnd5e.prepareSheetContext", (sheet, partId, context) => {
     if ( partId !== TAB_ID ) return;
-    context.doll = buildDollContext(sheet.document, { surface: "tab", editable: sheet.isEditable });
+    context.loadout = buildLoadoutContext(sheet.document, { surface: "tab", editable: sheet.isEditable });
   });
 
   Hooks.on("renderCharacterActorSheet", (sheet, element) => {
-    const root = element?.querySelector?.(`[data-tab="${TAB_ID}"] .sogrom-doll`);
+    const root = element?.querySelector?.(`[data-tab="${TAB_ID}"] .sogrom-loadout`);
     if ( !root ) return;
-    bindDoll(root, {
+    bindLoadout(root, {
       actor: sheet.document,
       editable: sheet.isEditable,
       onPortrait: () => new PortraitConfig({ document: sheet.document }).render({ force: true })
@@ -62,7 +62,7 @@ export function installSheetTab() {
 }
 
 /**
- * Show a character's doll tab: switch an open sheet to it, or open the sheet on it.
+ * Show a character's loadout tab: switch an open sheet to it, or open the sheet on it.
  * @param {Actor} actor
  * @returns {Promise<void>}
  */

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { HOOKS, MODULE_ID, SETTINGS } from "../scripts/config.mjs";
-import { buildDollContext, portraitFor, readLayout, slotLabel } from "../scripts/doll/context.mjs";
+import { buildLoadoutContext, portraitFor, readLayout, slotLabel } from "../scripts/loadout/context.mjs";
 import {
   dropItemOnSlot, equipToSlot, mayDropForeign, toggleAttunement, unequipSlot
-} from "../scripts/doll/actions.mjs";
+} from "../scripts/loadout/actions.mjs";
 import { installFoundryShims } from "./helpers/foundry-shims.mjs";
 import { fakeActor, worldItem } from "./helpers/actor.mjs";
 
@@ -11,10 +11,10 @@ const itemNamed = (actor, name) => actor.items.find(i => i.name === name);
 
 beforeEach(() => installFoundryShims());
 
-describe("buildDollContext", () => {
+describe("buildLoadoutContext", () => {
   it("groups dressed cells by layout column", () => {
     const actor = fakeActor({ items: [{ name: "Boots of Speed", subtype: "wondrous", equipped: true }] });
-    const ctx = buildDollContext(actor, { surface: "tab", editable: true });
+    const ctx = buildLoadoutContext(actor, { surface: "tab", editable: true });
     expect(ctx.groups.left.map(c => c.kind)).toEqual(["head", "neck", "back", "body", "wrists"]);
     expect(ctx.groups.hands.map(c => c.key)).toEqual(["mainHand", "offHand", "ranged-1", "ranged-2"]);
     expect(ctx.showBar).toBe(true);
@@ -26,9 +26,9 @@ describe("buildDollContext", () => {
     expect(feet.tooltip).toContain(`data-uuid="${feet.item.uuid}"`);
   });
 
-  it("nothing is draggable when the doll is read-only", () => {
+  it("nothing is draggable when the loadout is read-only", () => {
     const actor = fakeActor({ items: [{ name: "Boots of Speed", subtype: "wondrous", equipped: true }], isOwner: false });
-    const ctx = buildDollContext(actor);
+    const ctx = buildLoadoutContext(actor);
     expect(ctx.editable).toBe(false);
     expect(Object.values(ctx.groups).flat().some(c => c.draggable)).toBe(false);
   });
@@ -38,7 +38,7 @@ describe("buildDollContext", () => {
       { name: "Cloak of Protection", subtype: "wondrous", equipped: true, attunement: "required", attuned: true },
       { name: "Amulet of Health", subtype: "wondrous", equipped: true, attunement: "required", attuned: false }
     ] });
-    const cells = Object.values(buildDollContext(actor, { editable: true }).groups).flat();
+    const cells = Object.values(buildLoadoutContext(actor, { editable: true }).groups).flat();
     expect(cells.find(c => c.key === "back").ariaLabel).toContain("slot.attuned");
     expect(cells.find(c => c.key === "neck").ariaLabel).toContain("slot.inert");
     expect(cells.find(c => c.key === "neck").item.inert).toBe(true);
@@ -46,46 +46,46 @@ describe("buildDollContext", () => {
 
   it("describes a blocked off hand and ghosts the two-handed weapon", () => {
     const actor = fakeActor({ items: [{ name: "Greatsword", type: "weapon", properties: ["two"], equipped: true, img: "gs.webp" }] });
-    const off = buildDollContext(actor).groups.hands.find(c => c.key === "offHand");
+    const off = buildLoadoutContext(actor).groups.hands.find(c => c.key === "offHand");
     expect(off.blocked).toBe(true);
     expect(off.ghost).toBe("gs.webp");
     expect(off.ariaLabel).toContain("slot.blocked");
   });
 
   it("carries the stats dnd5e computed", () => {
-    const ctx = buildDollContext(fakeActor());
+    const ctx = buildLoadoutContext(fakeActor());
     expect(ctx.stats.ac).toBe(16);
     expect(ctx.stats.attunement.pips).toHaveLength(3);
     expect(ctx.stats.encumbrance).toMatchObject({ pct: 20, band: "light" });
   });
 
   it("only the dock shows the name", () => {
-    expect(buildDollContext(fakeActor(), { surface: "dock" }).showName).toBe(true);
-    expect(buildDollContext(fakeActor(), { surface: "tab" }).showName).toBe(false);
+    expect(buildLoadoutContext(fakeActor(), { surface: "dock" }).showName).toBe(true);
+    expect(buildLoadoutContext(fakeActor(), { surface: "tab" }).showName).toBe(false);
   });
 
   it("wears the Ember skin only when Ember is active", () => {
-    expect(buildDollContext(fakeActor()).ember).toBe(false);
+    expect(buildLoadoutContext(fakeActor()).ember).toBe(false);
     game.modules.get = id => (id === "ember" ? { active: true } : null);
-    expect(buildDollContext(fakeActor()).ember).toBe(true);
+    expect(buildLoadoutContext(fakeActor()).ember).toBe(true);
   });
 
   it("groups camp slots together only when camp clothes are on", () => {
-    expect(buildDollContext(fakeActor()).groups.camp).toEqual([]);
+    expect(buildLoadoutContext(fakeActor()).groups.camp).toEqual([]);
     game.settings._values[SETTINGS.slotLayout] = { camp: true };
-    expect(buildDollContext(fakeActor()).groups.camp.map(c => c.key)).toEqual(["campOutfit", "campUnderwear", "campFootwear"]);
+    expect(buildLoadoutContext(fakeActor()).groups.camp.map(c => c.key)).toEqual(["campOutfit", "campUnderwear", "campFootwear"]);
   });
 
   it("keeps the bar while kit remains, and drops it only when kit and trinkets are both off", () => {
     game.settings._values[SETTINGS.slotLayout] = { trinkets: 0 };
-    expect(buildDollContext(fakeActor()).showBar).toBe(true);
+    expect(buildLoadoutContext(fakeActor()).showBar).toBe(true);
     game.settings._values[SETTINGS.slotLayout] = { trinkets: 0, disabled: ["light", "instrument", "tools"] };
-    expect(buildDollContext(fakeActor()).showBar).toBe(false);
+    expect(buildLoadoutContext(fakeActor()).showBar).toBe(false);
   });
 
   it("honours the slot layout setting", () => {
     game.settings._values[SETTINGS.slotLayout] = { rings: 4, trinkets: 0, disabled: ["head"] };
-    const ctx = buildDollContext(fakeActor());
+    const ctx = buildLoadoutContext(fakeActor());
     expect(ctx.groups.right.filter(c => c.kind === "ring")).toHaveLength(4);
     expect(ctx.groups.trinkets).toHaveLength(0);
     expect(ctx.groups.left.some(c => c.kind === "head")).toBe(false);
@@ -168,6 +168,22 @@ describe("equipToSlot", () => {
     await equipToSlot(actor, itemNamed(actor, "Shield"), "offHand");
     expect(ui.notifications.shown[0].message).toContain("reject.offHandBlocked");
     expect(ui.notifications.shown[0].message).toContain("Greatsword");
+    expect(ui.notifications.shown[0].message).toContain("slot.kind.mainHand");
+  });
+
+  it("names the ranged pair's weapon when ranged-2 is blocked, not the melee hand's", async () => {
+    const actor = fakeActor({ items: [
+      { name: "Longsword", type: "weapon", subtype: "martialM", equipped: true },
+      { name: "Longbow", type: "weapon", subtype: "martialR", properties: ["two"], equipped: true },
+      { name: "Hand Crossbow", type: "weapon", subtype: "martialR" }
+    ] });
+    await equipToSlot(actor, itemNamed(actor, "Longbow"), "ranged-1");
+    ui.notifications.shown.length = 0;
+    expect(await equipToSlot(actor, itemNamed(actor, "Hand Crossbow"), "ranged-2")).toBe(false);
+    const message = ui.notifications.shown[0].message;
+    expect(message).toContain("reject.offHandBlocked");
+    expect(message).toContain("Longbow");
+    expect(message).not.toContain("Longsword");
   });
 
   it("stays quiet when asked to (the API path)", async () => {

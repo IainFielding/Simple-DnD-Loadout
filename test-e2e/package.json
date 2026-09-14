@@ -1,14 +1,14 @@
 {
-  "name": "sogrom-paper-doll-e2e",
+  "name": "sogrom-loadout-e2e",
   "private": true,
   "type": "module",
-  "description": "Local end-to-end harness: drives a real Foundry install to exercise the Paper Doll on real dnd5e character sheets, as a GM and a player. Not shipped.",
+  "description": "Local end-to-end harness: drives a real Foundry install to exercise the Loadout on real dnd5e character sheets, as a GM and a player. Not shipped.",
   "scripts": {
     "link-module": "node scripts/link-module.mjs",
     "provision": "node provision.mjs",
     "test": "node run.mjs",
-    "test:ember": "node run.mjs --world=paperdoll-ember",
-    "test:tidy": "node run.mjs --world=paperdoll-tidy",
+    "test:ember": "node run.mjs --world=loadout-ember",
+    "test:tidy": "node run.mjs --world=loadout-tidy",
     "hold": "node run.mjs --hold"
   },
   "devDependencies": {

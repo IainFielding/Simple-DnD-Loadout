@@ -11,14 +11,14 @@
  * repeated. What lives here is what a unit test cannot see: that dnd5e actually renders our tab;
  * that a drop event on a slot really equips the item rather than also sorting the inventory; that
  * the dock actually follows a sheet as it moves, minimises and closes; that an item equipped from
- * the inventory tab shows up on an open doll.
+ * the inventory tab shows up on an open loadout.
  */
 
 import { GEAR, HERO, STRANGER, closeAll, resetGear } from "./provision.mjs";
 
-const MODULE = "sogrom-simple-dnd5e-paper-doll";
+const MODULE = "sogrom-simple-dnd5e-loadout";
 const BASE = `/modules/${MODULE}/scripts`;
-const TAB = "sogromPaperDoll";
+const TAB = "sogromLoadout";
 
 /* -------------------------------------------- */
 /*  A very small test framework                 */
@@ -68,11 +68,11 @@ const frame = () => new Promise(r => requestAnimationFrame(() => r()));
 /** Import the module's own code. */
 export async function load() {
   const [context, actions, dock, tab, controller] = await Promise.all([
-    import(`${BASE}/doll/context.mjs`),
-    import(`${BASE}/doll/actions.mjs`),
+    import(`${BASE}/loadout/context.mjs`),
+    import(`${BASE}/loadout/actions.mjs`),
     import(`${BASE}/sheet/dock.mjs`),
     import(`${BASE}/sheet/tab.mjs`),
-    import(`${BASE}/doll/controller.mjs`)
+    import(`${BASE}/loadout/controller.mjs`)
   ]);
   return { context, actions, dock, tab, controller };
 }
@@ -83,18 +83,18 @@ export function gear(actor, key) {
   return actor.items.getName(spec.name);
 }
 
-/** Which item id the doll resolves into a slot. */
+/** Which item id the loadout resolves into a slot. */
 function slotItem(mod, actor, key) {
   return mod.context.readLayout(actor).layout.cells.find(c => c.key === key)?.item?.id ?? null;
 }
 
-/** Open a character's sheet on the doll tab and return the sheet and the doll root. */
+/** Open a character's sheet on the loadout tab and return the sheet and the loadout root. */
 export async function openTab(actor) {
   const sheet = actor.sheet;
   await sheet.render({ force: true, tab: TAB });
-  await waitFor(() => sheet.rendered && sheet.element?.querySelector(`[data-tab="${TAB}"] .sogrom-doll`), "the doll tab");
+  await waitFor(() => sheet.rendered && sheet.element?.querySelector(`[data-tab="${TAB}"] .sogrom-loadout`), "the loadout tab");
   sheet.changeTab(TAB, "primary");
-  return { sheet, root: () => sheet.element.querySelector(`[data-tab="${TAB}"] .sogrom-doll`) };
+  return { sheet, root: () => sheet.element.querySelector(`[data-tab="${TAB}"] .sogrom-loadout`) };
 }
 
 /** A real drop event carrying an Item payload, dispatched at a slot. */
@@ -136,7 +136,7 @@ export async function all() {
 /*  Suites                                      */
 /* -------------------------------------------- */
 
-/** dnd5e renders our tab, with the doll in it, and the tab switches like the system's own. */
+/** dnd5e renders our tab, with the loadout in it, and the tab switches like the system's own. */
 async function tabSuite(report, mod, hero) {
   const Sheet = dnd5e.applications.actor.CharacterActorSheet;
   report.check("the tab is registered on CharacterActorSheet", Sheet.TABS.some(t => t.tab === TAB));
@@ -145,28 +145,28 @@ async function tabSuite(report, mod, hero) {
   const { sheet, root } = await openTab(hero);
   report.check("the sheet is dnd5e's character sheet", sheet instanceof Sheet);
   report.check("the nav shows the tab button", !!sheet.element.querySelector(`nav.tabs [data-tab="${TAB}"]`));
-  report.check("the doll tab is active", sheet.element.querySelector(`section.tab[data-tab="${TAB}"]`)?.classList.contains("active"));
-  report.equal("the default doll draws 21 slots", root().querySelectorAll(".pd-slot").length, 21);
-  report.equal("the hands row reads main, off, then ranged 1 and 2", [...root().querySelectorAll(".pd-hands .pd-slot")].map(s => s.dataset.pdSlot), ["mainHand", "offHand", "ranged-1", "ranged-2"]);
-  const hand = key => root().querySelector(`.pd-slot[data-pd-slot="${key}"]`).getBoundingClientRect();
+  report.check("the loadout tab is active", sheet.element.querySelector(`section.tab[data-tab="${TAB}"]`)?.classList.contains("active"));
+  report.equal("the default loadout draws 21 slots", root().querySelectorAll(".lo-slot").length, 21);
+  report.equal("the hands row reads main, off, then ranged 1 and 2", [...root().querySelectorAll(".lo-hands .lo-slot")].map(s => s.dataset.loSlot), ["mainHand", "offHand", "ranged-1", "ranged-2"]);
+  const hand = key => root().querySelector(`.lo-slot[data-lo-slot="${key}"]`).getBoundingClientRect();
   report.check("the weapons in hand are left of the ranged slots", (hand("offHand").right < hand("ranged-1").left) && (hand("mainHand").right <= hand("offHand").left));
-  report.equal("the bar holds light, instrument, tools, then the trinkets", [...root().querySelectorAll(".pd-trinkets .pd-slot")].map(s => s.dataset.pdSlot), ["light", "instrument", "tools", "trinket-1", "trinket-2", "trinket-3", "trinket-4"]);
-  const sizes = [...root().querySelectorAll(".pd-trinkets .pd-slot")].map(s => Math.round(s.getBoundingClientRect().width));
+  report.equal("the bar holds light, instrument, tools, then the trinkets", [...root().querySelectorAll(".lo-trinkets .lo-slot")].map(s => s.dataset.loSlot), ["light", "instrument", "tools", "trinket-1", "trinket-2", "trinket-3", "trinket-4"]);
+  const sizes = [...root().querySelectorAll(".lo-trinkets .lo-slot")].map(s => Math.round(s.getBoundingClientRect().width));
   report.check("kit slots are the same size as trinkets", new Set(sizes).size === 1, sizes.join(", "));
   report.check("no slot uses dnd5e's data-item-id", !root().querySelector("[data-item-id]"));
 
   sheet.changeTab("inventory", "primary");
   await frame();
-  report.check("switching away hides the doll", !sheet.element.querySelector(`section.tab[data-tab="${TAB}"]`)?.classList.contains("active"));
+  report.check("switching away hides the loadout", !sheet.element.querySelector(`section.tab[data-tab="${TAB}"]`)?.classList.contains("active"));
 
   await mod.tab.showTab(hero);
   report.check("showTab switches an open sheet back", sheet.element.querySelector(`section.tab[data-tab="${TAB}"]`)?.classList.contains("active"));
 
-  // An item equipped the ordinary way — the inventory tab's toggle — appears on the doll.
+  // An item equipped the ordinary way — the inventory tab's toggle — appears on the loadout.
   await gear(hero, "chain").update({ "system.equipped": true });
-  await waitFor(() => root()?.querySelector(`.pd-slot[data-pd-slot="body"].is-filled`), "chain mail on the body slot");
-  report.check("equipping from the inventory shows the item on the doll", true);
-  report.equal("AC readout follows dnd5e's computed AC", Number(root().querySelector(".pd-stat--ac .pd-stat-value")?.textContent), hero.system.attributes.ac.value);
+  await waitFor(() => root()?.querySelector(`.lo-slot[data-lo-slot="body"].is-filled`), "chain mail on the body slot");
+  report.check("equipping from the inventory shows the item on the loadout", true);
+  report.equal("AC readout follows dnd5e's computed AC", Number(root().querySelector(".lo-stat--ac .lo-stat-value")?.textContent), hero.system.attributes.ac.value);
 }
 
 /** The write path against real documents. */
@@ -205,11 +205,11 @@ async function equipSuite(report, mod, hero) {
   report.check("lenient mode lets boots go in a trinket slot", await equipToSlot(hero, boots, "trinket-2"));
   report.check("unequipSlot takes them off", await unequipSlot(hero, "trinket-2") && !boots.system.equipped);
 
-  // Unequipping through the doll forgets the slot, so equipping again lands in the natural one…
+  // Unequipping through the loadout forgets the slot, so equipping again lands in the natural one…
   await boots.update({ "system.equipped": true });
-  report.equal("after a doll unequip, re-equipping uses the natural slot", slotItem(mod, hero, "feet"), boots.id);
+  report.equal("after a loadout unequip, re-equipping uses the natural slot", slotItem(mod, hero, "feet"), boots.id);
 
-  // …but unequipping from the inventory tab leaves the doll's memory alone, so the item comes back
+  // …but unequipping from the inventory tab leaves the loadout's memory alone, so the item comes back
   // to where the player last put it.
   await equipToSlot(hero, boots, "trinket-4");
   await boots.update({ "system.equipped": false });
@@ -230,12 +230,12 @@ async function equipSuite(report, mod, hero) {
 
   // Hooks fire with live documents.
   const seen = [];
-  const on = Hooks.on("simplePaperDoll.equipped", ({ item, slot }) => seen.push(`${item?.name}@${slot}`));
-  const veto = Hooks.on("simplePaperDoll.preEquip", ({ item }) => item.name !== "Dagger");
+  const on = Hooks.on("simpleLoadout.equipped", ({ item, slot }) => seen.push(`${item?.name}@${slot}`));
+  const veto = Hooks.on("simpleLoadout.preEquip", ({ item }) => item.name !== "Dagger");
   await equipToSlot(hero, gear(hero, "leather"), "body");
   const vetoed = await equipToSlot(hero, gear(hero, "dagger"), "mainHand", { notify: false });
-  Hooks.off("simplePaperDoll.equipped", on);
-  Hooks.off("simplePaperDoll.preEquip", veto);
+  Hooks.off("simpleLoadout.equipped", on);
+  Hooks.off("simpleLoadout.preEquip", veto);
   report.check("equipped hook fires with the live item", seen.includes("Leather Armor@body"), seen.join(", "));
   report.check("preEquip can veto", vetoed === false && !gear(hero, "dagger").system.equipped);
 }
@@ -245,7 +245,7 @@ async function kitSuite(report, mod, hero) {
   const { equipToSlot } = mod.actions;
   const { layout } = mod.context.readLayout(hero);
   const has = key => layout.cells.some(c => c.key === key);
-  report.check("the default doll has both ranged slots and the kit row", ["ranged-1", "ranged-2", "light", "instrument", "tools"].every(has));
+  report.check("the default loadout has both ranged slots and the kit row", ["ranged-1", "ranged-2", "light", "instrument", "tools"].every(has));
 
   // Equipping the ordinary way lands each in its own slot.
   for ( const key of ["longbow", "torch", "lute", "smiths"] ) await gear(hero, key).update({ "system.equipped": true });
@@ -273,11 +273,19 @@ async function kitSuite(report, mod, hero) {
   report.check("a tinderbox is not a light source", !(await equipToSlot(hero, gear(hero, "tinderbox"), "light", { notify: false })));
   report.check("a hand crossbow fills the second ranged slot", await equipToSlot(hero, gear(hero, "handCrossbow"), "ranged-2", { notify: false }));
 
+  // The ranged pair follows the two-handed rule, like the melee hands.
+  report.check("the longbow back into ranged-1", await equipToSlot(hero, gear(hero, "longbow"), "ranged-1", { sourceKey: "mainHand", notify: false }));
+  report.check("…clears the hand crossbow from ranged-2", !gear(hero, "handCrossbow").system.equipped && slotItem(mod, hero, "ranged-2") === null);
+  report.check("…blocks ranged-2", mod.context.readLayout(hero).layout.cells.find(c => c.key === "ranged-2").blocked);
+  report.check("…and refuses the hand crossbow there", !(await equipToSlot(hero, gear(hero, "handCrossbow"), "ranged-2", { notify: false })));
+  report.check("…but not the melee off hand", !mod.context.readLayout(hero).layout.cells.find(c => c.key === "offHand").blocked);
+  report.check("a longbow can never go in ranged-2", !(await equipToSlot(hero, gear(hero, "longbow"), "ranged-2", { sourceKey: "ranged-1", notify: false })));
+
   // The picker for a kit slot lists only that kind.
   const { root, sheet } = await openTab(hero);
-  root().querySelector('.pd-slot[data-pd-slot="light"]').click();
-  const picker = await waitFor(() => root()?.querySelector(".pd-picker"), "the light picker");
-  report.equal("the light picker lists only light sources", [...picker.querySelectorAll(".pd-picker-name")].map(n => n.textContent.trim()), ["Torch"]);
+  root().querySelector('.lo-slot[data-lo-slot="light"]').click();
+  const picker = await waitFor(() => root()?.querySelector(".lo-picker"), "the light picker");
+  report.equal("the light picker lists only light sources", [...picker.querySelectorAll(".lo-picker-name")].map(n => n.textContent.trim()), ["Torch"]);
   await sheet.close();
 }
 
@@ -291,14 +299,14 @@ async function barSuite(report, mod, hero) {
     await sheet.render({ force: true });
     await waitFor(() => sheet.rendered, "the sheet");
     sheet.setPosition({ left: 700, top: 40 });
-    const dock = await mod.dock.PaperDollDock.open(sheet);
-    const bar = await waitFor(() => dock?.rendered && dock.element.querySelector(".pd-trinkets"), "the dock's bar");
+    const dock = await mod.dock.LoadoutDock.open(sheet);
+    const bar = await waitFor(() => dock?.rendered && dock.element.querySelector(".lo-trinkets"), "the dock's bar");
     await frame();
-    const slots = [...bar.querySelectorAll(".pd-slot")];
+    const slots = [...bar.querySelectorAll(".lo-slot")];
     report.equal("the full bar has eight slots", slots.length, 8);
     const tops = new Set(slots.map(s => Math.round(s.getBoundingClientRect().top)));
     report.equal("…all on one line in the dock", tops.size, 1);
-    const weapons = ["mainHand", "offHand", "ranged-1", "ranged-2"].map(key => dock.element.querySelector(`.pd-slot[data-pd-slot="${key}"]`).getBoundingClientRect());
+    const weapons = ["mainHand", "offHand", "ranged-1", "ranged-2"].map(key => dock.element.querySelector(`.lo-slot[data-lo-slot="${key}"]`).getBoundingClientRect());
     report.equal("all four weapon slots are the same size", new Set(weapons.map(r => `${Math.round(r.width)}x${Math.round(r.height)}`)).size, 1);
     report.equal("…and fit the dock on one line", new Set(weapons.map(r => Math.round(r.top))).size, 1);
     await sheet.close();
@@ -309,9 +317,9 @@ async function barSuite(report, mod, hero) {
 
 /** Where every slot is drawn, by key, in viewport pixels. */
 function slotRects(root) {
-  return Object.fromEntries([...root.querySelectorAll(".pd-slot")].map(el => {
+  return Object.fromEntries([...root.querySelectorAll(".lo-slot")].map(el => {
     const r = el.getBoundingClientRect();
-    return [el.dataset.pdSlot, [r.left, r.top, r.width, r.height].map(v => Math.round(v * 2) / 2)];
+    return [el.dataset.loSlot, [r.left, r.top, r.width, r.height].map(v => Math.round(v * 2) / 2)];
   }));
 }
 
@@ -332,27 +340,27 @@ async function campSuite(report, mod, hero) {
     const { sheet, root } = await openTab(hero);
     sheet.setPosition({ left: 560, top: 40, width: 800, height: 1000 });
     await frame();
-    report.check("camp clothes are off by default: no camp group", !root().querySelector(".pd-camp"));
+    report.check("camp clothes are off by default: no camp group", !root().querySelector(".lo-camp"));
     const tabOff = slotRects(root());
 
-    const dock = await mod.dock.PaperDollDock.open(sheet);
-    await waitFor(() => dock?.rendered && dock.element.querySelector(".sogrom-doll"), "the dock");
-    const dockRoot = () => dock.element.querySelector(".sogrom-doll");
+    const dock = await mod.dock.LoadoutDock.open(sheet);
+    await waitFor(() => dock?.rendered && dock.element.querySelector(".sogrom-loadout"), "the dock");
+    const dockRoot = () => dock.element.querySelector(".sogrom-loadout");
     await frame();
     const dockOff = slotRects(dockRoot());
 
     await game.settings.set(MODULE, "slotLayout", layoutWith(true));
-    await waitFor(() => root()?.querySelectorAll(".pd-camp .pd-slot").length === 3, "the camp group in the tab");
-    await waitFor(() => dockRoot()?.querySelectorAll(".pd-camp .pd-slot").length === 3, "the camp group in the dock");
+    await waitFor(() => root()?.querySelectorAll(".lo-camp .lo-slot").length === 3, "the camp group in the tab");
+    await waitFor(() => dockRoot()?.querySelectorAll(".lo-camp .lo-slot").length === 3, "the camp group in the dock");
     await frame();
 
-    const group = root().querySelector(".pd-camp");
+    const group = root().querySelector(".lo-camp");
     report.equal("the GM option adds exactly the three camp slots, in order",
-      [...group.querySelectorAll(".pd-slot")].map(s => s.dataset.pdSlot), ["campOutfit", "campUnderwear", "campFootwear"]);
+      [...group.querySelectorAll(".lo-slot")].map(s => s.dataset.loSlot), ["campOutfit", "campUnderwear", "campFootwear"]);
     const style = getComputedStyle(group);
     report.check("the three are grouped inside one visible border",
       (parseFloat(style.borderTopWidth) >= 1) && (style.borderTopStyle !== "none"), `${style.borderTopWidth} ${style.borderTopStyle}`);
-    report.check("the group sits inside the stage", !!group.closest(".pd-stage"));
+    report.check("the group sits inside the stage", !!group.closest(".lo-stage"));
 
     const tabMoved = movedSlots(tabOff, slotRects(root()));
     report.equal("turning camp on moves no existing slot in the sheet tab", tabMoved, []);
@@ -361,16 +369,16 @@ async function campSuite(report, mod, hero) {
 
     // The group must not sit on top of another slot.
     const g = group.getBoundingClientRect();
-    const overlaps = [...root().querySelectorAll(".pd-slot:not(.pd-camp .pd-slot)")].filter(el => {
+    const overlaps = [...root().querySelectorAll(".lo-slot:not(.lo-camp .lo-slot)")].filter(el => {
       const r = el.getBoundingClientRect();
       return (r.left < g.right) && (r.right > g.left) && (r.top < g.bottom) && (r.bottom > g.top);
-    }).map(el => el.dataset.pdSlot);
+    }).map(el => el.dataset.loSlot);
     report.equal("the camp group covers no other slot", overlaps, []);
-    const d = dockRoot().querySelector(".pd-camp").getBoundingClientRect();
-    const dockOverlaps = [...dockRoot().querySelectorAll(".pd-slot:not(.pd-camp .pd-slot)")].filter(el => {
+    const d = dockRoot().querySelector(".lo-camp").getBoundingClientRect();
+    const dockOverlaps = [...dockRoot().querySelectorAll(".lo-slot:not(.lo-camp .lo-slot)")].filter(el => {
       const r = el.getBoundingClientRect();
       return (r.left < d.right) && (r.right > d.left) && (r.top < d.bottom) && (r.bottom > d.top);
-    }).map(el => el.dataset.pdSlot);
+    }).map(el => el.dataset.loSlot);
     report.equal("…in the dock either", dockOverlaps, []);
 
     // --- Packed, not worn.
@@ -396,8 +404,8 @@ async function campSuite(report, mod, hero) {
     report.check("chain mail is refused as a camp outfit", !(await equipToSlot(hero, gear(hero, "chain"), "campOutfit", { notify: false })));
 
     // The menu on a camp slot unpacks rather than unequips.
-    await waitFor(() => root()?.querySelector('.pd-slot[data-pd-slot="campOutfit"].is-filled'), "the packed outfit drawn");
-    const slot = root().querySelector('.pd-slot[data-pd-slot="campOutfit"]');
+    await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="campOutfit"].is-filled'), "the packed outfit drawn");
+    const slot = root().querySelector('.lo-slot[data-lo-slot="campOutfit"]');
     const rect = slot.getBoundingClientRect();
     slot.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rect.x + 5, clientY: rect.y + 5 }));
     const menu = await waitFor(() => document.querySelector("#context-menu"), "the camp slot menu");
@@ -410,7 +418,7 @@ async function campSuite(report, mod, hero) {
 
     // --- The GM switch: off again hides the group, and the packed items are simply in the pack.
     await game.settings.set(MODULE, "slotLayout", layoutWith(false));
-    await waitFor(() => !root()?.querySelector(".pd-camp"), "the camp group to go");
+    await waitFor(() => !root()?.querySelector(".lo-camp"), "the camp group to go");
     report.check("turning the option off removes the group", true);
     report.check("…and nothing packed became equipped", !shoes.system.equipped && !gear(hero, "smallclothes").system.equipped);
 
@@ -420,16 +428,16 @@ async function campSuite(report, mod, hero) {
     report.check("thieves' tools go in the tools slot", await equipToSlot(hero, gear(hero, "thieves"), "tools", { notify: false }));
     report.check("dice go in the tools slot", await equipToSlot(hero, gear(hero, "dice"), "tools", { notify: false }));
     const tab = await openTab(hero);
-    tab.root().querySelector('.pd-slot[data-pd-slot="instrument"]').click();
-    const instrumentPicker = await waitFor(() => tab.root()?.querySelector(".pd-picker"), "the instrument picker");
-    report.equal("the instrument picker still lists only instruments", [...instrumentPicker.querySelectorAll(".pd-picker-name")].map(n => n.textContent.trim()), ["Lute"]);
+    tab.root().querySelector('.lo-slot[data-lo-slot="instrument"]').click();
+    const instrumentPicker = await waitFor(() => tab.root()?.querySelector(".lo-picker"), "the instrument picker");
+    report.equal("the instrument picker still lists only instruments", [...instrumentPicker.querySelectorAll(".lo-picker-name")].map(n => n.textContent.trim()), ["Lute"]);
     await tab.sheet.close();
   } finally {
     await game.settings.set(MODULE, "slotLayout", before);
   }
 }
 
-/** Real events at the rendered doll. */
+/** Real events at the rendered loadout. */
 async function domSuite(report, mod, hero) {
   const { sheet, root } = await openTab(hero);
   const dagger = gear(hero, "dagger");
@@ -437,15 +445,15 @@ async function domSuite(report, mod, hero) {
   // Drop.
   let inventorySorts = 0;
   const sortHook = Hooks.on("preUpdateItem", (_item, changes) => { if ( "sort" in changes ) inventorySorts++; });
-  dropOn(root().querySelector('.pd-slot[data-pd-slot="offHand"]'), { type: "Item", uuid: dagger.uuid });
+  dropOn(root().querySelector('.lo-slot[data-lo-slot="offHand"]'), { type: "Item", uuid: dagger.uuid });
   await waitFor(() => dagger.system.equipped, "the dropped dagger to equip");
   Hooks.off("preUpdateItem", sortHook);
   report.check("dropping an owned item on a slot equips it there", slotItem(mod, hero, "offHand") === dagger.id);
   report.equal("the sheet's own drop handler did not also sort the inventory", inventorySorts, 0);
 
   // Drag between slots carries the source slot.
-  await waitFor(() => root()?.querySelector('.pd-slot[data-pd-slot="offHand"].is-filled'), "re-render");
-  dropOn(root().querySelector('.pd-slot[data-pd-slot="mainHand"]'), {
+  await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="offHand"].is-filled'), "re-render");
+  dropOn(root().querySelector('.lo-slot[data-lo-slot="mainHand"]'), {
     type: "Item", uuid: dagger.uuid, [MODULE]: { actor: hero.uuid, slot: "offHand" }
   });
   await waitFor(() => slotItem(mod, hero, "mainHand") === dagger.id, "the dagger to move hands");
@@ -454,8 +462,8 @@ async function domSuite(report, mod, hero) {
   // A world item from the sidebar, as the GM (allowed by default).
   const worldBoots = await Item.create({ name: "[e2e] Sidebar Boots", type: "equipment", img: "icons/equipment/feet/boots-leather-green.webp", system: { type: { value: "wondrous" } } });
   try {
-    await waitFor(() => root()?.querySelector('.pd-slot[data-pd-slot="feet"]'), "re-render");
-    dropOn(root().querySelector('.pd-slot[data-pd-slot="feet"]'), { type: "Item", uuid: worldBoots.uuid });
+    await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="feet"]'), "re-render");
+    dropOn(root().querySelector('.lo-slot[data-lo-slot="feet"]'), { type: "Item", uuid: worldBoots.uuid });
     const copy = await waitFor(() => hero.items.getName("[e2e] Sidebar Boots"), "a copy in the inventory");
     await waitFor(() => copy.system.equipped, "the copy to equip");
     report.check("a GM dropping a sidebar item copies it in and equips it", slotItem(mod, hero, "feet") === copy.id);
@@ -465,28 +473,28 @@ async function domSuite(report, mod, hero) {
   }
 
   // Picker.
-  await waitFor(() => root()?.querySelector('.pd-slot[data-pd-slot="neck"]'), "re-render");
-  root().querySelector('.pd-slot[data-pd-slot="ring-1"]').click();
-  const picker = await waitFor(() => root()?.querySelector(".pd-picker"), "the picker to open");
-  const names = [...picker.querySelectorAll(".pd-picker-name")].map(n => n.textContent.trim());
+  await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="neck"]'), "re-render");
+  root().querySelector('.lo-slot[data-lo-slot="ring-1"]').click();
+  const picker = await waitFor(() => root()?.querySelector(".lo-picker"), "the picker to open");
+  const names = [...picker.querySelectorAll(".lo-picker-name")].map(n => n.textContent.trim());
   report.equal("the ring picker lists exactly the rings", names.sort(), ["Ring of Protection", "Ring of Swimming", "Ring of Warmth"]);
-  const search = picker.querySelector(".pd-picker-search");
+  const search = picker.querySelector(".lo-picker-search");
   search.value = "warm";
   search.dispatchEvent(new Event("input", { bubbles: true }));
-  report.equal("search filters the list", [...picker.querySelectorAll("li:not([hidden]) .pd-picker-name")].map(n => n.textContent.trim()), ["Ring of Warmth"]);
-  picker.querySelector(`[data-pd-choose="${gear(hero, "ringWarmth").id}"]`).click();
+  report.equal("search filters the list", [...picker.querySelectorAll("li:not([hidden]) .lo-picker-name")].map(n => n.textContent.trim()), ["Ring of Warmth"]);
+  picker.querySelector(`[data-lo-choose="${gear(hero, "ringWarmth").id}"]`).click();
   await waitFor(() => gear(hero, "ringWarmth").system.equipped, "the picked ring to equip");
   report.check("choosing from the picker equips into that slot", slotItem(mod, hero, "ring-1") === gear(hero, "ringWarmth").id);
 
   // Escape closes the picker.
-  await waitFor(() => root()?.querySelector('.pd-slot[data-pd-slot="head"]'), "re-render");
-  root().querySelector('.pd-slot[data-pd-slot="head"]').click();
-  const headPicker = await waitFor(() => root()?.querySelector(".pd-picker"), "the head picker");
+  await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="head"]'), "re-render");
+  root().querySelector('.lo-slot[data-lo-slot="head"]').click();
+  const headPicker = await waitFor(() => root()?.querySelector(".lo-picker"), "the head picker");
   headPicker.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  report.check("Escape closes the picker", !root().querySelector(".pd-picker"));
+  report.check("Escape closes the picker", !root().querySelector(".lo-picker"));
 
   // Context menu.
-  const ring = root().querySelector('.pd-slot[data-pd-slot="ring-1"]');
+  const ring = root().querySelector('.lo-slot[data-lo-slot="ring-1"]');
   const rect = ring.getBoundingClientRect();
   ring.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rect.x + 5, clientY: rect.y + 5 }));
   const menu = await waitFor(() => document.querySelector("#context-menu"), "the context menu");
@@ -497,8 +505,8 @@ async function domSuite(report, mod, hero) {
   report.check("Unequip from the menu takes the ring off", true);
 
   // Keyboard.
-  await waitFor(() => root()?.querySelector('.pd-slot[data-pd-slot="mainHand"].is-filled'), "re-render");
-  const main = root().querySelector('.pd-slot[data-pd-slot="mainHand"]');
+  await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="mainHand"].is-filled'), "re-render");
+  const main = root().querySelector('.lo-slot[data-lo-slot="mainHand"]');
   main.focus();
   main.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
   await waitFor(() => !dagger.system.equipped, "Delete to unequip");
@@ -509,7 +517,7 @@ async function domSuite(report, mod, hero) {
 
 /** The dock follows the sheet without wrapping it. */
 async function dockSuite(report, mod, hero) {
-  const { PaperDollDock, canDock } = mod.dock;
+  const { LoadoutDock, canDock } = mod.dock;
   const sheet = hero.sheet;
   await sheet.render({ force: true });
   await waitFor(() => sheet.rendered, "the sheet");
@@ -518,9 +526,9 @@ async function dockSuite(report, mod, hero) {
   report.check("a character sheet can be docked to", canDock(sheet));
   report.check("an unpositioned sheet (like Ember's creation sheet) cannot", !canDock({ document: hero, options: { window: { positioned: false } } }));
 
-  const dock = await PaperDollDock.open(sheet);
-  await waitFor(() => dock?.rendered && dock.element.querySelector(".sogrom-doll"), "the dock");
-  report.check("the header toggle finds the open dock", PaperDollDock.for(sheet) === dock);
+  const dock = await LoadoutDock.open(sheet);
+  await waitFor(() => dock?.rendered && dock.element.querySelector(".sogrom-loadout"), "the dock");
+  report.check("the header toggle finds the open dock", LoadoutDock.for(sheet) === dock);
   report.check("the dock registers in actor.apps", hero.apps[dock.id] === dock);
 
   const sheetRect = () => sheet.element.getBoundingClientRect();
@@ -541,7 +549,7 @@ async function dockSuite(report, mod, hero) {
 
   // Keeps up with document changes without listening for them.
   await gear(hero, "cloak").update({ "system.equipped": true });
-  await waitFor(() => dock.element.querySelector('.pd-slot[data-pd-slot="back"].is-filled'), "the dock to show the cloak");
+  await waitFor(() => dock.element.querySelector('.lo-slot[data-lo-slot="back"].is-filled'), "the dock to show the cloak");
   report.check("an item update re-renders the dock", true);
 
   await sheet.minimize();
@@ -553,15 +561,15 @@ async function dockSuite(report, mod, hero) {
 
   await sheet.close();
   // `rendered` goes false as soon as closing *starts*; the registry is cleared when it finishes.
-  await waitFor(() => !PaperDollDock.for(sheet), "the dock to finish closing");
-  report.check("closing the sheet closes the dock", !PaperDollDock.for(sheet));
+  await waitFor(() => !LoadoutDock.for(sheet), "the dock to finish closing");
+  report.check("closing the sheet closes the dock", !LoadoutDock.for(sheet));
   report.check("…and unregisters it from actor.apps", !hero.apps[dock.id]);
 
   // The header control is present on the sheet frame.
   await sheet.render({ force: true });
   await waitFor(() => sheet.rendered, "the sheet again");
   const controls = [...sheet._headerControlButtons()].map(c => c.action);
-  report.check("the sheet header offers the Paper Doll control", controls.includes("sogromPaperDoll"), controls.join(", "));
+  report.check("the sheet header offers the Loadout control", controls.includes("sogromLoadout"), controls.join(", "));
   await sheet.close();
 }
 
@@ -583,22 +591,22 @@ async function apiSuite(report, _mod, hero) {
   await hero.sheet.close();
 }
 
-/** World settings reshape open dolls. */
+/** World settings reshape open loadouts. */
 async function settingsSuite(report, mod, hero) {
   const { root } = await openTab(hero);
   const before = game.settings.get(MODULE, "slotLayout");
   try {
     await game.settings.set(MODULE, "slotLayout", { rings: 4, trinkets: 0, disabled: ["wrists"] });
-    await waitFor(() => root()?.querySelectorAll('.pd-slot[data-pd-kind="ring"]').length === 4, "four ring slots");
+    await waitFor(() => root()?.querySelectorAll('.lo-slot[data-lo-kind="ring"]').length === 4, "four ring slots");
     report.check("more rings appear on an open sheet", true);
-    report.check("disabled slots disappear", !root().querySelector('.pd-slot[data-pd-kind="wrists"]'));
-    report.check("zero trinkets leaves the kit on the bar and no trinket slots", !root().querySelector(".pd-slot--trinket") && root().querySelectorAll(".pd-trinkets .pd-slot").length === 3);
+    report.check("disabled slots disappear", !root().querySelector('.lo-slot[data-lo-kind="wrists"]'));
+    report.check("zero trinkets leaves the kit on the bar and no trinket slots", !root().querySelector(".lo-slot--trinket") && root().querySelectorAll(".lo-trinkets .lo-slot").length === 3);
 
     // Something worn in a slot that is switched off stays equipped and is listed.
     await game.settings.set(MODULE, "slotLayout", { rings: 1, trinkets: 0, disabled: [] });
     await gear(hero, "ringProtection").update({ "system.equipped": true });
     await gear(hero, "ringWarmth").update({ "system.equipped": true });
-    await waitFor(() => root()?.querySelector(".pd-unslotted .pd-chip"), "the Also Worn list");
+    await waitFor(() => root()?.querySelector(".lo-unslotted .lo-chip"), "the Also Worn list");
     report.check("a worn item with no room is listed under Also Worn", true);
     report.check("…and stays equipped", gear(hero, "ringWarmth").system.equipped || gear(hero, "ringProtection").system.equipped);
   } finally {
@@ -615,7 +623,7 @@ async function settingsSuite(report, mod, hero) {
   report.check("the stranger exists for the player suite", !!stranger);
 }
 
-/** The two small windows: they render, and what they save is what the doll then reads. */
+/** The two small windows: they render, and what they save is what the loadout then reads. */
 async function configSuite(report, mod, hero) {
   const { SlotConfigApp } = await import(`${BASE}/app/slot-config.mjs`);
   const { PortraitConfig } = await import(`${BASE}/app/portrait-config.mjs`);
@@ -636,7 +644,7 @@ async function configSuite(report, mod, hero) {
     slots.element.querySelector('input[name="enabled.instrument"]').checked = false;
     await slots.submit();
     report.equal("submitting saves the layout", game.settings.get(MODULE, "slotLayout"), { rings: 3, trinkets: 2, ranged: 1, camp: false, disabled: ["waist", "instrument"] });
-    report.equal("…which the doll reads", mod.context.readLayout(hero).layout.cells.filter(c => c.kind === "ring").length, 3);
+    report.equal("…which the loadout reads", mod.context.readLayout(hero).layout.cells.filter(c => c.kind === "ring").length, 3);
   } finally {
     await game.settings.set(MODULE, "slotLayout", before);
     await slots.close();
@@ -646,7 +654,7 @@ async function configSuite(report, mod, hero) {
   const portrait = new PortraitConfig({ document: hero });
   await portrait.render({ force: true });
   await waitFor(() => portrait.rendered && portrait.element.querySelector("file-picker"), "the portrait form");
-  report.check("the portrait form has a live preview", !!portrait.element.querySelector(".pd-portrait-preview img"));
+  report.check("the portrait form has a live preview", !!portrait.element.querySelector(".lo-portrait-preview img"));
   portrait.element.querySelector("file-picker").value = "icons/svg/cowled.svg";
   portrait.element.querySelector("select").value = "contain";
   portrait.element.querySelector("range-picker").value = 40;

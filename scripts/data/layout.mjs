@@ -1,10 +1,10 @@
 /**
- * What the doll shows, and what a drag or click should change.
+ * What the loadout shows, and what a drag or click should change.
  *
  * ## Two sources of truth, reconciled
  *
  * dnd5e already records *whether* an item is worn: `system.equipped`, which its own inventory tab
- * toggles, which drives AC, and which other modules read. The doll adds *where*: an actor flag
+ * toggles, which drives AC, and which other modules read. The loadout adds *where*: an actor flag
  * mapping slot keys to item ids. The two can disagree — a player unequips a cloak from the
  * inventory tab and the flag still says "back: cloak" — and the rule for that is simple:
  *
@@ -125,31 +125,76 @@ export function candidateKinds(item) {
   }
 }
 
-/** The first empty cell an item can auto-place into without breaking the hands rule. */
-function findHome(cells, item, strict) {
+/**
+ * The loadout's hand pairs, as in Baldur's Gate 3's two weapon sets: the melee hands, and — when the GM
+ * has given the loadout two ranged slots — `ranged-1` as the ranged main hand and `ranged-2` as its off
+ * hand. Each pair follows the same two-handed rule, independently: a longbow in `ranged-1` blocks
+ * `ranged-2` but leaves the melee off hand free.
+ * @param {Cell[]|import("./slots.mjs").SlotInstance[]} cells
+ * @returns {{main: object, off: object}[]}
+ */
+export function handPairs(cells) {
+  const pairs = [];
   const main = cells.find(c => c.kind === "mainHand");
   const off = cells.find(c => c.kind === "offHand");
+  if ( main && off ) pairs.push({ main, off });
+  const rangedMain = cells.find(c => (c.kind === "ranged") && (c.index === 1));
+  const rangedOff = cells.find(c => (c.kind === "ranged") && (c.index === 2));
+  if ( rangedMain && rangedOff ) pairs.push({ main: rangedMain, off: rangedOff });
+  return pairs;
+}
+
+/**
+ * Whether an item may go in a slot right now: what the slot accepts, plus the two-handed rule for
+ * the pair the slot belongs to. The one check shared by planning, auto-placement, the picker and the
+ * drag preview, so all four agree.
+ * @param {Layout} layout
+ * @param {string} key
+ * @param {import("./item-facts.mjs").ItemFacts} item
+ * @returns {{ok: true}|{ok: false, reason: string, pairMain?: Cell}}
+ *   `pairMain` is the main-hand slot of the pair, for refusals that name it.
+ */
+export function checkPlacement(layout, key, item) {
+  const target = layout.cells.find(c => c.key === key);
+  if ( !target ) return { ok: false, reason: "unknownSlot" };
+  const pair = handPairs(layout.cells).find(p => p.off === target);
+  const verdict = accepts(target.kind, item, { strict: layout.strict });
+  if ( !verdict.ok ) return pair ? { ...verdict, pairMain: pair.main } : verdict;
+  if ( pair ) {
+    if ( item.twoHanded ) return { ok: false, reason: "twoHandedOffHand", pairMain: pair.main };
+    if ( pair.main.item?.twoHanded && (pair.main.item.id !== item.id) ) {
+      return { ok: false, reason: "offHandBlocked", pairMain: pair.main };
+    }
+  }
+  return { ok: true };
+}
+
+/** The first empty cell an item can auto-place into without breaking a two-handed rule. */
+function findHome(cells, item, strict) {
+  const pairs = handPairs(cells);
   for ( const kind of candidateKinds(item) ) {
     for ( const cell of cells ) {
       if ( (cell.kind !== kind) || cell.item ) continue;
       if ( !accepts(kind, item, { strict }).ok ) continue;
       // Never *create* a two-handed conflict by auto-placement.
-      if ( (kind === "mainHand") && item.twoHanded && off?.item ) continue;
-      if ( (kind === "offHand") && main?.item?.twoHanded ) continue;
+      const asMain = pairs.find(p => p.main === cell);
+      const asOff = pairs.find(p => p.off === cell);
+      if ( asMain && item.twoHanded && asMain.off.item ) continue;
+      if ( asOff && (item.twoHanded || asOff.main.item?.twoHanded) ) continue;
       return cell;
     }
   }
   return null;
 }
 
-/** Flag the off hand while the main hand holds a two-handed weapon. */
+/** Flag each pair's off hand while its main hand holds a two-handed weapon. */
 function markTwoHanded(cells) {
-  const main = cells.find(c => c.kind === "mainHand");
-  const off = cells.find(c => c.kind === "offHand");
-  if ( !main?.item?.twoHanded || !off ) return;
-  off.blocked = true;
-  off.blockedBy = main.item;
-  off.conflict = !!off.item;
+  for ( const { main, off } of handPairs(cells) ) {
+    if ( !main.item?.twoHanded ) continue;
+    off.blocked = true;
+    off.blockedBy = main.item;
+    off.conflict = !!off.item;
+  }
 }
 
 /** The layout's current contents as an assignments map: every cell, auto-placed ones included. */
@@ -177,7 +222,8 @@ export function snapshot(layout) {
  * - **Onto an occupied slot**: the occupant comes off (unequipped) — unless the item was dragged
  *   *from another slot* and the occupant fits back where it came from, in which case they swap.
  * - **An item already in a different slot** moves rather than duplicating.
- * - **A two-handed weapon into the main hand** clears the off hand.
+ * - **A two-handed weapon into a main hand** clears that pair's off hand — the melee off hand, or
+ *   `ranged-2` for a bow in `ranged-1`.
  * - **Anything into a blocked off hand** is refused, with a reason that names the weapon's rule,
  *   rather than silently unequipping the greatsword the player is holding.
  *
@@ -186,7 +232,7 @@ export function snapshot(layout) {
  * @param {string} params.targetKey
  * @param {import("./item-facts.mjs").ItemFacts} params.item
  * @param {string|null} [params.sourceKey]  The slot the item was dragged from, if any.
- * @returns {Plan|Refusal}
+ * @returns {Plan|Refusal}  A refusal may carry `pairMain`, the main-hand slot its reason refers to.
  */
 export function planPlace(layout, { targetKey, item, sourceKey = null }) {
   const cell = (key) => layout.cells.find(c => c.key === key);
@@ -194,13 +240,9 @@ export function planPlace(layout, { targetKey, item, sourceKey = null }) {
   if ( !target ) return { error: "unknownSlot" };
   if ( !item ) return { error: "notSlottable" };
 
-  const verdict = accepts(target.kind, item, { strict: layout.strict });
-  if ( !verdict.ok ) return { error: verdict.reason };
-
-  const main = layout.cells.find(c => c.kind === "mainHand");
-  if ( (target.kind === "offHand") && main?.item?.twoHanded && (main.item.id !== item.id) ) {
-    return { error: "offHandBlocked" };
-  }
+  const verdict = checkPlacement(layout, targetKey, item);
+  if ( !verdict.ok ) return verdict.pairMain ? { error: verdict.reason, pairMain: verdict.pairMain } : { error: verdict.reason };
+  const pairs = handPairs(layout.cells);
 
   const next = snapshot(layout);
   const itemsById = new Map(layout.cells.filter(c => c.item).map(c => [c.item.id, c.item]));
@@ -217,10 +259,11 @@ export function planPlace(layout, { targetKey, item, sourceKey = null }) {
   if ( occupantId && (occupantId !== item.id) ) {
     const occupant = itemsById.get(occupantId);
     const source = sourceKey && (sourceKey !== targetKey) ? cell(sourceKey) : null;
-    // Only a two-handed weapon can conflict with a swap, and it can only ever sit in the main
-    // hand — so a swap never lands one in a position the two-handed rule below would undo.
+    // A two-handed occupant can never be swapped into an off hand: it comes off instead.
+    const sourceIsOff = !!source && pairs.some(p => p.off === source);
     const swapOk = source && (next[sourceKey] === null)
-      && accepts(source.kind, occupant, { strict: layout.strict }).ok;
+      && accepts(source.kind, occupant, { strict: layout.strict }).ok
+      && !(sourceIsOff && occupant.twoHanded);
     involved.set(occupant.id, occupant);
     if ( swapOk ) {
       next[sourceKey] = occupant.id;
@@ -230,10 +273,11 @@ export function planPlace(layout, { targetKey, item, sourceKey = null }) {
     }
   }
 
-  // A two-handed grip needs the other hand free.
-  if ( (target.kind === "mainHand") && item.twoHanded ) {
-    const offKey = layout.cells.find(c => c.kind === "offHand")?.key;
-    const offId = offKey ? next[offKey] : null;
+  // A two-handed grip needs the other hand of its pair free.
+  const targetPair = pairs.find(p => p.main === target);
+  if ( targetPair && item.twoHanded ) {
+    const offKey = targetPair.off.key;
+    const offId = next[offKey];
     if ( offId && (offId !== item.id) ) {
       next[offKey] = null;
       involved.set(offId, itemsById.get(offId));
@@ -310,7 +354,7 @@ export function candidatesFor(layout, key, items) {
   const where = new Map(layout.cells.filter(c => c.item).map(c => [c.item.id, c.key]));
   return items
     .filter(item => item.slottable && (item.id !== target.item?.id))
-    .filter(item => accepts(target.kind, item, { strict: layout.strict }).ok)
+    .filter(item => checkPlacement(layout, key, item).ok)
     .map(item => ({ item, wornIn: where.get(item.id) ?? null }))
     .sort((a, b) => (Number(a.item.equipped) - Number(b.item.equipped)) || bySortThenName(a.item, b.item));
 }

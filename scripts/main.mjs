@@ -2,7 +2,7 @@
  * Entry point — module.json points Foundry here.
  *
  *   init   settings, templates, the public API, the dnd5e sheet tab, the keybinding
- *   ready  the `simplePaperDoll.ready` hook, once everything above is live
+ *   ready  the `simpleLoadout.ready` hook, once everything above is live
  *
  * plus the always-on hooks that put the dock button in character sheet headers and, for users who
  * asked for it, open the dock along with the sheet.
@@ -13,7 +13,7 @@ import {
 } from "./config.mjs";
 import { registerApi } from "./api.mjs";
 import { SlotConfigApp } from "./app/slot-config.mjs";
-import { PaperDollDock, canDock } from "./sheet/dock.mjs";
+import { LoadoutDock, canDock } from "./sheet/dock.mjs";
 import { installSheetTab } from "./sheet/tab.mjs";
 
 /** Whether this world runs the system the module is written for. */
@@ -24,16 +24,16 @@ Hooks.once("init", () => {
   registerApi();
 
   if ( !isDnd5e() ) {
-    console.error(`${MODULE_ID} | requires the dnd5e game system; the paper doll is disabled.`);
+    console.error(`${MODULE_ID} | requires the dnd5e game system; the loadout is disabled.`);
     return;
   }
 
-  // The doll and its slot are partials, shared by the sheet tab and the dock; the picker is
+  // The loadout and its slot are partials, shared by the sheet tab and the dock; the picker is
   // rendered on demand but preloaded so the first click does not wait on a fetch.
   foundry.applications.handlebars.loadTemplates({
-    "sogrom-pd-doll": tpl("doll.hbs"),
-    "sogrom-pd-slot": tpl("parts/slot.hbs"),
-    "sogrom-pd-picker": tpl("parts/picker.hbs")
+    "sogrom-lo-loadout": tpl("loadout.hbs"),
+    "sogrom-lo-slot": tpl("parts/slot.hbs"),
+    "sogrom-lo-picker": tpl("parts/picker.hbs")
   });
 
   if ( setting(SETTINGS.sheetTab) ) installSheetTab();
@@ -54,19 +54,19 @@ Hooks.once("ready", () => {
 // Tidy 5e's, anyone's — which is what lets the dock work beside sheets we know nothing about.
 Hooks.on("getHeaderControlsActorSheetV2", (sheet, controls) => {
   if ( !isDnd5e() || !setting(SETTINGS.dockButton) || !canDock(sheet) ) return;
-  if ( controls.some(c => c.action === "sogromPaperDoll") ) return;
+  if ( controls.some(c => c.action === "sogromLoadout") ) return;
   controls.push({
-    action: "sogromPaperDoll",
+    action: "sogromLoadout",
     icon: "fa-solid fa-person",
     label: `${MODULE_ID}.dock.toggle`,
-    onClick: () => PaperDollDock.toggle(sheet)
+    onClick: () => LoadoutDock.toggle(sheet)
   });
 });
 
 Hooks.on("renderActorSheetV2", (sheet, _element, _context, options) => {
   if ( !options?.isFirstRender || !isDnd5e() || !setting(SETTINGS.autoDock) || !canDock(sheet) ) return;
   // Next frame: the sheet has its final position once its own first render settles.
-  requestAnimationFrame(() => PaperDollDock.open(sheet));
+  requestAnimationFrame(() => LoadoutDock.open(sheet));
 });
 
 /* -------------------------------------------- */
@@ -103,7 +103,7 @@ function registerSettings() {
     name: t("settings.strictSlots.name"),
     hint: t("settings.strictSlots.hint"),
     scope: "world", config: true, type: Boolean, default: DEFAULTS[SETTINGS.strictSlots],
-    onChange: rerenderDolls
+    onChange: rerenderLoadouts
   });
   game.settings.register(MODULE_ID, SETTINGS.foreignDrops, {
     name: t("settings.foreignDrops.name"),
@@ -114,7 +114,7 @@ function registerSettings() {
   game.settings.register(MODULE_ID, SETTINGS.slotLayout, {
     scope: "world", config: false, type: Object,
     default: foundry.utils.deepClone(DEFAULTS[SETTINGS.slotLayout]),
-    onChange: rerenderDolls
+    onChange: rerenderLoadouts
   });
   game.settings.registerMenu(MODULE_ID, "slotLayoutMenu", {
     name: t("settings.slotLayoutMenu.name"),
@@ -153,7 +153,7 @@ async function toggleDockFor(actor) {
   // and opening that just to find it cannot be docked to would be a surprise.
   if ( !canDock(sheet) ) return;
   if ( !sheet.rendered ) await sheet.render({ force: true });
-  await PaperDollDock.toggle(sheet);
+  await LoadoutDock.toggle(sheet);
 }
 
 /* -------------------------------------------- */
@@ -161,14 +161,14 @@ async function toggleDockFor(actor) {
 /* -------------------------------------------- */
 
 function eachDock(fn) {
-  for ( const app of foundry.applications.instances.values() ) if ( app instanceof PaperDollDock ) fn(app);
+  for ( const app of foundry.applications.instances.values() ) if ( app instanceof LoadoutDock ) fn(app);
 }
 
-/** Re-render everything that draws a doll, after a setting that changes what dolls show. */
-function rerenderDolls() {
-  log("settings changed; re-rendering dolls");
+/** Re-render everything that draws a loadout, after a setting that changes what loadouts show. */
+function rerenderLoadouts() {
+  log("settings changed; re-rendering loadouts");
   for ( const app of foundry.applications.instances.values() ) {
     const isCharacterSheet = (app.document instanceof Actor) && (app.document.type === "character");
-    if ( (app instanceof PaperDollDock) || isCharacterSheet ) app.render();
+    if ( (app instanceof LoadoutDock) || isCharacterSheet ) app.render();
   }
 }

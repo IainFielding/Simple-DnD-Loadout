@@ -2,7 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 
 /**
- * Flat ESLint config for the Paper Doll.
+ * Flat ESLint config for the Loadout.
  *
  * The module is browser ESM running inside Foundry VTT, so on top of the standard browser
  * globals we declare the Foundry / dnd5e globals the code reaches for (`game`, `CONFIG`,

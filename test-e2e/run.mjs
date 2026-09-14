@@ -2,7 +2,7 @@
  * Run the end-to-end suites against a real Foundry world.
  *
  *   node run.mjs                          # the main world
- *   node run.mjs --world=paperdoll-ember  # the Ember world: every suite, plus the skin
+ *   node run.mjs --world=loadout-ember  # the Ember world: every suite, plus the skin
  *   node run.mjs --only=dockSuite,domSuite
  *   node run.mjs --hold                   # leave the browsers open at the end
  *   HEADED=1 node run.mjs                 # watch it
@@ -21,7 +21,7 @@ const argv = process.argv.slice(2);
 const flag = name => argv.find(a => a.startsWith(`--${name}=`))?.split("=")[1];
 const has = name => argv.includes(`--${name}`);
 
-const worldId = flag("world") ?? "paperdoll";
+const worldId = flag("world") ?? "loadout";
 const only = flag("only")?.split(",").map(s => s.trim()).filter(Boolean) ?? null;
 const spec = WORLDS[worldId];
 

@@ -1,7 +1,7 @@
 /**
  * The only code that writes to the world.
  *
- * Every change the doll makes goes through {@link applyPlan}: a plan from `data/layout.mjs` is
+ * Every change the loadout makes goes through {@link applyPlan}: a plan from `data/layout.mjs` is
  * checked against permissions and the `preEquip` hook, then committed in at most two writes.
  * Callers — the controller's drag/click handlers, the public API — never touch documents directly,
  * which keeps "who may do what" in one place.
@@ -36,15 +36,7 @@ export async function equipToSlot(actor, item, targetKey, { sourceKey = null, no
   const { layout, counts } = readLayout(actor);
   const facts = itemFacts(item);
   const plan = planPlace(layout, { targetKey, item: facts, sourceKey });
-  if ( plan.error ) {
-    const target = layout.cells.find(c => c.key === targetKey);
-    const main = layout.cells.find(c => c.kind === "mainHand");
-    return refuse(plan.error, {
-      item: item.name,
-      slot: target ? slotLabel(target, counts) : targetKey,
-      weapon: main?.item?.name ?? ""
-    }, notify);
-  }
+  if ( plan.error ) return refuse(plan.error, refusalData(layout, counts, plan, targetKey, item.name), notify);
 
   if ( !callCancellable(HOOKS.preEquip, { actor, item, slot: targetKey }) ) {
     return refuse("vetoed", {}, notify);
@@ -93,13 +85,7 @@ export async function dropItemOnSlot(actor, dropped, targetKey, { sourceKey = nu
   // copy in the inventory.
   const { layout, counts } = readLayout(actor);
   const probe = planPlace(layout, { targetKey, item: { ...itemFacts(dropped), id: "__probe__", equipped: false } });
-  if ( probe.error ) {
-    const target = layout.cells.find(c => c.key === targetKey);
-    const main = layout.cells.find(c => c.kind === "mainHand");
-    return refuse(probe.error, {
-      item: dropped.name, slot: target ? slotLabel(target, counts) : targetKey, weapon: main?.item?.name ?? ""
-    }, true);
-  }
+  if ( probe.error ) return refuse(probe.error, refusalData(layout, counts, probe, targetKey, dropped.name), true);
 
   const data = dropped.toObject();
   delete data._id;
@@ -141,6 +127,22 @@ export async function toggleAttunement(actor, item) {
 }
 
 /* -------------------------------------------- */
+
+/**
+ * The placeholders a refusal message fills: the item, the slot, and — for the two-handed reasons —
+ * the main-hand slot of the pair and the weapon gripped in it. Taken from the refusal's own pair,
+ * so a blocked `ranged-2` names the longbow in `ranged-1`, not whatever is in the melee main hand.
+ */
+function refusalData(layout, counts, refusal, targetKey, itemName) {
+  const target = layout.cells.find(c => c.key === targetKey);
+  const main = refusal.pairMain ?? null;
+  return {
+    item: itemName,
+    slot: target ? slotLabel(target, counts) : targetKey,
+    main: main ? slotLabel(main, counts) : "",
+    weapon: main?.item?.name ?? ""
+  };
+}
 
 /** Log and optionally show a refusal; always resolves `false` so callers can `return refuse(…)`. */
 function refuse(reason, data, notify) {

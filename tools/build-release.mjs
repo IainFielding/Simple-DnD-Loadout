@@ -2,7 +2,7 @@
  * Build the release: `dist/module.json` and `dist/module.zip`, exactly as GitHub will serve them.
  *
  *   npm run package                                           # a local trial build, 0.0.0-dev
- *   node tools/build-release.mjs --version=1.2.0 --repo=IainFielding/Simple-DnD-Paper-Doll --tag=v1.2.0
+ *   node tools/build-release.mjs --version=1.2.0 --repo=IainFielding/Simple-DnD-Loadout --tag=v1.2.0
  *
  * The release workflow calls this, and so does CI on every push, so the archive a release ships
  * is built by the same code that has already been exercised on every commit before it.
@@ -32,7 +32,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const arg = name => process.argv.find(a => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
 
 const version = arg("version") ?? "0.0.0-dev";
-const repo = arg("repo") ?? "IainFielding/Simple-DnD-Paper-Doll";
+const repo = arg("repo") ?? "IainFielding/Simple-DnD-Loadout";
 const tag = arg("tag") ?? `v${version}`;
 const out = resolve(root, arg("out") ?? "dist");
 

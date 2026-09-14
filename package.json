@@ -1,8 +1,8 @@
 {
-  "name": "sogrom-simple-dnd5e-paper-doll",
+  "name": "sogrom-simple-dnd5e-loadout",
   "private": true,
   "type": "module",
-  "description": "Dev tooling (lint, unit tests, release packaging) for the Simple D&D Paper Doll Foundry module. Not shipped in the module archive.",
+  "description": "Dev tooling (lint, unit tests, release packaging) for the Simple D&D Loadout Foundry module. Not shipped in the module archive.",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",

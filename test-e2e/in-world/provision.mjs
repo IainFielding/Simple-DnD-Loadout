@@ -7,9 +7,9 @@
  * run so no suite inherits another's state.
  */
 
-const MODULE = "sogrom-simple-dnd5e-paper-doll";
+const MODULE = "sogrom-simple-dnd5e-loadout";
 export const PREFIX = "[e2e]";
-export const HERO = `${PREFIX} Doll Hero`;
+export const HERO = `${PREFIX} Loadout Hero`;
 export const STRANGER = `${PREFIX} Stranger`;
 
 /**

@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { buildSlots } from "../scripts/data/slots.mjs";
 import {
-  candidateKinds, candidatesFor, planPlace, planRemove, resolveLayout, snapshot, suggestSlot
+  candidateKinds, candidatesFor, checkPlacement, handPairs, planPlace, planRemove, resolveLayout, snapshot, suggestSlot
 } from "../scripts/data/layout.mjs";
 import {
   amulet, boots, chainMail, cloak, dagger, greatsword, handCrossbow, iounStone, leather, longbow, longsword, lute, make,
   potion, ring, shield, smallclothes, smithsTools, softShoes, thievesTools, torch, travelersClothes
 } from "./helpers/items.mjs";
 
-/** The default doll with camp clothes switched on. */
+/** The default loadout with camp clothes switched on. */
 const campSlots = () => buildSlots({ camp: true });
 
-/** Resolve a layout from items and assignments on the default doll. */
+/** Resolve a layout from items and assignments on the default loadout. */
 function layoutOf(items, assignments = {}, { strict = false, slots = buildSlots() } = {}) {
   return resolveLayout({ slots, assignments, items, strict });
 }
@@ -29,7 +29,7 @@ function apply(items, plan) {
 }
 
 describe("resolveLayout", () => {
-  it("draws an empty doll for a character with nothing equipped", () => {
+  it("draws an empty loadout for a character with nothing equipped", () => {
     const layout = layoutOf([longsword(), chainMail()]);
     expect(layout.cells.every(c => !c.item)).toBe(true);
     expect(layout.unslotted).toEqual([]);
@@ -124,13 +124,111 @@ describe("resolveLayout", () => {
   });
 
   describe("ranged and kit slots", () => {
-    it("auto-places ranged weapons into the ranged slots, not the hands", () => {
+    it("auto-places ranged weapons into the ranged slots before the hands", () => {
+      const bow = longbow({ equipped: true, sort: 1 });
+      const layout = layoutOf([bow]);
+      expect(itemIn(layout, "ranged-1")).toBe(bow.id);
+      expect(itemIn(layout, "mainHand")).toBeNull();
+    });
+
+    it("a hand crossbow beside a slung longbow is held, since ranged-2 is blocked", () => {
       const bow = longbow({ equipped: true, sort: 1 });
       const xbow = handCrossbow({ equipped: true, sort: 2 });
       const layout = layoutOf([bow, xbow]);
       expect(itemIn(layout, "ranged-1")).toBe(bow.id);
-      expect(itemIn(layout, "ranged-2")).toBe(xbow.id);
-      expect(itemIn(layout, "mainHand")).toBeNull();
+      expect(itemIn(layout, "ranged-2")).toBeNull();
+      expect(itemIn(layout, "mainHand")).toBe(xbow.id);
+    });
+
+    it("the ranged slots are a second hand pair: ranged-1 main, ranged-2 off", () => {
+      const pairs = handPairs(buildSlots()).map(p => [p.main.key, p.off.key]);
+      expect(pairs).toEqual([["mainHand", "offHand"], ["ranged-1", "ranged-2"]]);
+      expect(handPairs(buildSlots({ ranged: 1 })).map(p => p.main.key)).toEqual(["mainHand"]);
+    });
+
+    it("a two-handed bow in ranged-1 blocks ranged-2 and shows as its ghost", () => {
+      const bow = longbow({ equipped: true });
+      const layout = layoutOf([bow], { "ranged-1": bow.id });
+      expect(cell(layout, "ranged-2")).toMatchObject({ blocked: true, conflict: false });
+      expect(cell(layout, "ranged-2").blockedBy.id).toBe(bow.id);
+    });
+
+    it("…refuses a hand crossbow into the blocked ranged-2, naming ranged-1", () => {
+      const bow = longbow({ equipped: true });
+      const xbow = handCrossbow();
+      const layout = layoutOf([bow, xbow], { "ranged-1": bow.id });
+      const refusal = planPlace(layout, { targetKey: "ranged-2", item: xbow });
+      expect(refusal).toMatchObject({ error: "offHandBlocked" });
+      expect(refusal.pairMain.key).toBe("ranged-1");
+    });
+
+    it("a two-handed ranged weapon never goes in ranged-2", () => {
+      const bow = longbow();
+      const refusal = planPlace(layoutOf([bow]), { targetKey: "ranged-2", item: bow });
+      expect(refusal).toMatchObject({ error: "twoHandedOffHand" });
+      expect(refusal.pairMain.key).toBe("ranged-1");
+    });
+
+    it("a longbow into ranged-1 clears a hand crossbow from ranged-2", () => {
+      const xbows = [handCrossbow({ equipped: true, sort: 1 }), handCrossbow({ equipped: true, sort: 2 })];
+      const bow = longbow();
+      const layout = layoutOf([...xbows, bow]);
+      expect(itemIn(layout, "ranged-2")).toBe(xbows[1].id);
+      const plan = planPlace(layout, { targetKey: "ranged-1", item: bow });
+      expect(plan.assignments["ranged-1"]).toBe(bow.id);
+      expect(plan.assignments["ranged-2"]).toBeNull();
+      expect(plan.unequip.sort()).toEqual([xbows[0].id, xbows[1].id].sort());
+    });
+
+    it("two one-handed ranged weapons fill both ranged slots", () => {
+      const xbows = [handCrossbow({ equipped: true, sort: 1 }), handCrossbow({ equipped: true, sort: 2 })];
+      const layout = layoutOf(xbows);
+      expect([itemIn(layout, "ranged-1"), itemIn(layout, "ranged-2")]).toEqual(xbows.map(x => x.id));
+      expect(cell(layout, "ranged-2").blocked).toBe(false);
+    });
+
+    it("auto-placement: a second longbow is held, never put in ranged-2", () => {
+      const bows = [longbow({ equipped: true, sort: 1 }), longbow({ equipped: true, sort: 2 })];
+      const layout = layoutOf(bows);
+      expect(itemIn(layout, "ranged-1")).toBe(bows[0].id);
+      expect(itemIn(layout, "ranged-2")).toBeNull();
+      expect(itemIn(layout, "mainHand")).toBe(bows[1].id);
+    });
+
+    it("auto-placement never slings a longbow over a filled ranged-2", () => {
+      const xbow = handCrossbow({ equipped: true, sort: 1 });
+      const bow = longbow({ equipped: true, sort: 2 });
+      const layout = layoutOf([xbow, bow], { "ranged-2": xbow.id });
+      expect(itemIn(layout, "ranged-1")).toBeNull();
+      expect(itemIn(layout, "mainHand")).toBe(bow.id);
+    });
+
+    it("swapping a hand crossbow from ranged-2 onto a longbow takes the longbow off rather than into ranged-2", () => {
+      const bow = longbow({ equipped: true });
+      const xbow = handCrossbow({ equipped: true });
+      const layout = layoutOf([bow, xbow], { "ranged-1": bow.id, "ranged-2": xbow.id });
+      expect(cell(layout, "ranged-2").conflict).toBe(true);
+      const plan = planPlace(layout, { targetKey: "ranged-1", item: xbow, sourceKey: "ranged-2" });
+      expect(plan.assignments["ranged-1"]).toBe(xbow.id);
+      expect(plan.assignments["ranged-2"]).toBeNull();
+      expect(plan.unequip).toEqual([bow.id]);
+    });
+
+    it("the picker and the drag preview agree with planning about a blocked ranged-2", () => {
+      const bow = longbow({ equipped: true });
+      const xbow = handCrossbow();
+      const layout = layoutOf([bow, xbow], { "ranged-1": bow.id });
+      expect(candidatesFor(layout, "ranged-2", [bow, xbow])).toEqual([]);
+      expect(checkPlacement(layout, "ranged-2", xbow).ok).toBe(false);
+      expect(checkPlacement(layout, "ranged-1", xbow).ok).toBe(true);
+    });
+
+    it("a longbow in ranged-1 leaves the melee off hand free", () => {
+      const bow = longbow({ equipped: true });
+      const s = shield();
+      const layout = layoutOf([bow, s], { "ranged-1": bow.id });
+      expect(cell(layout, "offHand").blocked).toBe(false);
+      expect(planPlace(layout, { targetKey: "offHand", item: s }).error).toBeUndefined();
     });
 
     it("a slung two-handed bow does not block the off hand", () => {
@@ -184,10 +282,16 @@ describe("resolveLayout", () => {
       expect(plan.unequip).toEqual([t.id]);
     });
 
-    it("the API's suggestion for a bow is a free ranged slot", () => {
-      const worn = longbow({ equipped: true });
+    it("the API's suggestion for a second one-handed ranged weapon is ranged-2", () => {
+      const worn = handCrossbow({ equipped: true });
       const spare = handCrossbow();
       expect(suggestSlot(layoutOf([worn, spare]), spare)).toBe("ranged-2");
+    });
+
+    it("…but beside a slung longbow it is the hand, since ranged-2 is blocked", () => {
+      const worn = longbow({ equipped: true });
+      const spare = handCrossbow();
+      expect(suggestSlot(layoutOf([worn, spare]), spare)).toBe("mainHand");
     });
   });
 
@@ -430,12 +534,14 @@ describe("planPlace", () => {
   it("refuses anything into an off hand blocked by a two-handed weapon", () => {
     const g = greatsword({ equipped: true });
     const s = shield();
-    expect(planPlace(layoutOf([g, s]), { targetKey: "offHand", item: s })).toEqual({ error: "offHandBlocked" });
+    const refusal = planPlace(layoutOf([g, s]), { targetKey: "offHand", item: s });
+    expect(refusal).toMatchObject({ error: "offHandBlocked" });
+    expect(refusal.pairMain.key).toBe("mainHand");
   });
 
   it("refuses a two-handed weapon in the off hand with the specific reason", () => {
     const g = greatsword();
-    expect(planPlace(layoutOf([g]), { targetKey: "offHand", item: g })).toEqual({ error: "twoHandedOffHand" });
+    expect(planPlace(layoutOf([g]), { targetKey: "offHand", item: g })).toMatchObject({ error: "twoHandedOffHand" });
   });
 
   it("refuses the wrong slot, unknown slots and unslottable items", () => {

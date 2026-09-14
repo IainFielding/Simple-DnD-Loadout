@@ -1,5 +1,5 @@
 /**
- * Reduce a dnd5e Item to the plain facts the doll reasons about.
+ * Reduce a dnd5e Item to the plain facts the loadout reasons about.
  *
  * Everything downstream — the classifier, the layout resolver, the equip planner — works on these
  * snapshots rather than on live documents. That is what lets all of it run under plain Node in

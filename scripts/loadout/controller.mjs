@@ -1,7 +1,7 @@
 /**
- * Make a rendered doll interactive.
+ * Make a rendered loadout interactive.
  *
- * {@link bindDoll} is called on the *freshly rendered* `.sogrom-doll` element after every render,
+ * {@link bindLoadout} is called on the *freshly rendered* `.sogrom-loadout` element after every render,
  * by both surfaces. Binding on that element, rather than delegating from the sheet's window, is
  * deliberate: dnd5e's sheet listens for `drop` on its own root, and a listener on the same element
  * cannot be pre-empted by `stopPropagation`. From a descendant it can, so a drop on a slot is ours
@@ -13,9 +13,8 @@
 
 import { MODULE_ID, t, tpl } from "../config.mjs";
 import { SLOT_KINDS } from "../data/slots.mjs";
-import { accepts } from "../data/classify.mjs";
 import { itemFacts } from "../data/item-facts.mjs";
-import { candidatesFor } from "../data/layout.mjs";
+import { candidatesFor, checkPlacement } from "../data/layout.mjs";
 import { rarityClass } from "../data/stats.mjs";
 import { readLayout, slotLabel } from "./context.mjs";
 import { dropItemOnSlot, equipToSlot, toggleAttunement, unequipSlot } from "./actions.mjs";
@@ -24,7 +23,7 @@ import { dropItemOnSlot, equipToSlot, toggleAttunement, unequipSlot } from "./ac
 const BOUND = new WeakSet();
 
 /**
- * The drag in progress that started on a doll. Held here because a `dragover` handler cannot read
+ * The drag in progress that started on a loadout. Held here because a `dragover` handler cannot read
  * the drag's data (browsers protect it until `drop`), yet the slots should light up as soon as the
  * drag starts.
  * @type {{uuid: string, actorUuid: string, slot: string|null}|null}
@@ -32,13 +31,13 @@ const BOUND = new WeakSet();
 let activeDrag = null;
 
 /**
- * @param {HTMLElement} root   The `.sogrom-doll` element.
+ * @param {HTMLElement} root   The `.sogrom-loadout` element.
  * @param {object} options
  * @param {Actor} options.actor
  * @param {boolean} options.editable
  * @param {Function} [options.onPortrait]  Opens the portrait settings.
  */
-export function bindDoll(root, { actor, editable, onPortrait }) {
+export function bindLoadout(root, { actor, editable, onPortrait }) {
   if ( !root || BOUND.has(root) ) return;
   BOUND.add(root);
   const ctx = { root, actor, editable, onPortrait };
@@ -63,25 +62,25 @@ export function bindDoll(root, { actor, editable, onPortrait }) {
 /* -------------------------------------------- */
 
 function onClick(event, ctx) {
-  const action = event.target.closest("[data-pd-action]")?.dataset.pdAction;
+  const action = event.target.closest("[data-lo-action]")?.dataset.loAction;
   if ( action === "portrait" ) return ctx.onPortrait?.();
 
-  const chip = event.target.closest("[data-pd-unslotted]");
-  if ( chip ) return ctx.actor.items.get(chip.dataset.pdUnslotted)?.sheet?.render(true);
+  const chip = event.target.closest("[data-lo-unslotted]");
+  if ( chip ) return ctx.actor.items.get(chip.dataset.loUnslotted)?.sheet?.render(true);
 
-  const slot = event.target.closest(".pd-slot");
-  if ( !slot || slot.closest(".pd-picker") ) return;
-  const item = ctx.actor.items.get(slot.dataset.pdItem ?? "");
+  const slot = event.target.closest(".lo-slot");
+  if ( !slot || slot.closest(".lo-picker") ) return;
+  const item = ctx.actor.items.get(slot.dataset.loItem ?? "");
   if ( item ) return item.sheet?.render(true);
-  if ( ctx.editable && !slot.classList.contains("is-blocked") ) openPicker(ctx, slot.dataset.pdSlot);
+  if ( ctx.editable && !slot.classList.contains("is-blocked") ) openPicker(ctx, slot.dataset.loSlot);
 }
 
 function onKeyDown(event, ctx) {
-  const slot = event.target.closest?.(".pd-slot");
+  const slot = event.target.closest?.(".lo-slot");
   if ( !slot || !ctx.editable ) return;
-  if ( ["Delete", "Backspace"].includes(event.key) && slot.dataset.pdItem ) {
+  if ( ["Delete", "Backspace"].includes(event.key) && slot.dataset.loItem ) {
     event.preventDefault();
-    unequipSlot(ctx.actor, slot.dataset.pdSlot);
+    unequipSlot(ctx.actor, slot.dataset.loSlot);
   }
 }
 
@@ -91,15 +90,15 @@ function onKeyDown(event, ctx) {
 
 function createContextMenu(ctx) {
   const ContextMenu = foundry.applications.ux.ContextMenu.implementation;
-  const itemOf = target => ctx.actor.items.get(target.dataset.pdItem ?? target.dataset.pdUnslotted ?? "");
-  const inCamp = target => target.dataset.pdGroup === "camp";
+  const itemOf = target => ctx.actor.items.get(target.dataset.loItem ?? target.dataset.loUnslotted ?? "");
+  const inCamp = target => target.dataset.loGroup === "camp";
   const canAttuneItem = target => {
     const item = itemOf(target);
     // A packed item is not worn, so attunement is not offered from its camp slot.
     return ctx.editable && !!item && !inCamp(target) && ["required", "optional"].includes(item.system.attunement);
   };
 
-  new ContextMenu(ctx.root, ".pd-slot.is-filled, .pd-chip", [
+  new ContextMenu(ctx.root, ".lo-slot.is-filled, .lo-chip", [
     {
       label: `${MODULE_ID}.menu.view`,
       icon: "<i class=\"fa-solid fa-eye\"></i>",
@@ -126,21 +125,21 @@ function createContextMenu(ctx) {
     {
       label: `${MODULE_ID}.menu.swap`,
       icon: "<i class=\"fa-solid fa-arrow-right-arrow-left\"></i>",
-      visible: target => ctx.editable && !!target.dataset.pdSlot,
-      onClick: (_event, target) => openPicker(ctx, target.dataset.pdSlot)
+      visible: target => ctx.editable && !!target.dataset.loSlot,
+      onClick: (_event, target) => openPicker(ctx, target.dataset.loSlot)
     },
     {
       label: `${MODULE_ID}.menu.unpack`,
       icon: "<i class=\"fa-solid fa-box-open\"></i>",
       visible: target => ctx.editable && inCamp(target),
-      onClick: (_event, target) => unequipSlot(ctx.actor, target.dataset.pdSlot)
+      onClick: (_event, target) => unequipSlot(ctx.actor, target.dataset.loSlot)
     },
     {
       label: `${MODULE_ID}.menu.unequip`,
       icon: "<i class=\"fa-solid fa-hand\"></i>",
       visible: target => ctx.editable && !inCamp(target),
       onClick: (_event, target) => {
-        if ( target.dataset.pdSlot ) return unequipSlot(ctx.actor, target.dataset.pdSlot);
+        if ( target.dataset.loSlot ) return unequipSlot(ctx.actor, target.dataset.loSlot);
         return itemOf(target)?.update({ "system.equipped": false });
       }
     }
@@ -152,15 +151,15 @@ function createContextMenu(ctx) {
 /* -------------------------------------------- */
 
 function onDragStart(event, ctx) {
-  const source = event.target.closest?.("[data-pd-uuid]");
+  const source = event.target.closest?.("[data-lo-uuid]");
   if ( !source ) return;
-  const slot = source.dataset.pdSlot ?? null;
-  activeDrag = { uuid: source.dataset.pdUuid, actorUuid: ctx.actor.uuid, slot };
+  const slot = source.dataset.loSlot ?? null;
+  activeDrag = { uuid: source.dataset.loUuid, actorUuid: ctx.actor.uuid, slot };
   // A standard Item drag payload, so the slot can also be dropped on other sheets, the hotbar or
-  // another actor exactly like an inventory row. Our extra key only matters to a doll.
+  // another actor exactly like an inventory row. Our extra key only matters to a loadout.
   event.dataTransfer.setData("text/plain", JSON.stringify({
     type: "Item",
-    uuid: source.dataset.pdUuid,
+    uuid: source.dataset.loUuid,
     [MODULE_ID]: { actor: ctx.actor.uuid, slot }
   }));
   event.dataTransfer.effectAllowed = "copyMove";
@@ -170,34 +169,34 @@ function onDragStart(event, ctx) {
 }
 
 function onDragEnter(event, ctx) {
-  // Drags from outside the doll — the inventory tab of another sheet, the Items sidebar, a
+  // Drags from outside the loadout — the inventory tab of another sheet, the Items sidebar, a
   // compendium — do not pass through our dragstart. dnd5e keeps the payload of any drag its own
   // DragDrop started, which is how we can light slots up for those too. A drag it did not start
   // (a compendium index entry, another module's) simply gets no preview; the drop still works.
-  if ( ctx.root.dataset.pdHighlight ) return;
+  if ( ctx.root.dataset.loHighlight ) return;
   const payload = activeDrag ?? CONFIG.ux?.DragDrop?.getPayload?.(event);
   if ( (payload?.type === "Item") || activeDrag ) highlightFor(ctx, payload?.uuid);
 }
 
 function onDragOver(event, ctx) {
-  const slot = event.target.closest?.(".pd-slot");
+  const slot = event.target.closest?.(".lo-slot");
   if ( !slot ) return;
   event.preventDefault();
   event.stopPropagation();
   event.dataTransfer.dropEffect = activeDrag?.actorUuid === ctx.actor.uuid ? "move" : "copy";
-  for ( const el of ctx.root.querySelectorAll(".pd-slot.is-drop-hover") ) if ( el !== slot ) el.classList.remove("is-drop-hover");
+  for ( const el of ctx.root.querySelectorAll(".lo-slot.is-drop-hover") ) if ( el !== slot ) el.classList.remove("is-drop-hover");
   slot.classList.add("is-drop-hover");
 }
 
 function onDragLeave(event, ctx) {
-  const slot = event.target.closest?.(".pd-slot");
+  const slot = event.target.closest?.(".lo-slot");
   if ( slot && !slot.contains(event.relatedTarget) ) slot.classList.remove("is-drop-hover");
-  // Left the doll altogether.
+  // Left the loadout altogether.
   if ( !ctx.root.contains(event.relatedTarget) && !activeDrag ) clearHighlight(ctx.root);
 }
 
 async function onDrop(event, ctx) {
-  const slot = event.target.closest?.(".pd-slot");
+  const slot = event.target.closest?.(".lo-slot");
   // Not on a slot: leave the drop to the sheet (an inventory sort, say), but drop our preview.
   if ( !slot ) return clearHighlight(ctx.root);
   event.preventDefault();
@@ -209,8 +208,8 @@ async function onDrop(event, ctx) {
   const dropped = await fromUuid(data.uuid);
   const sameActor = data[MODULE_ID]?.actor === ctx.actor.uuid;
   const sourceKey = sameActor ? (data[MODULE_ID]?.slot ?? null) : null;
-  if ( sourceKey === slot.dataset.pdSlot ) return;
-  await dropItemOnSlot(ctx.actor, dropped, slot.dataset.pdSlot, { sourceKey });
+  if ( sourceKey === slot.dataset.loSlot ) return;
+  await dropItemOnSlot(ctx.actor, dropped, slot.dataset.loSlot, { sourceKey });
 }
 
 /** Mark every slot as a valid or invalid target for the item being dragged. */
@@ -220,19 +219,16 @@ function highlightFor(ctx, uuid) {
   if ( !item?.system ) return;
   const facts = itemFacts(item);
   const { layout } = readLayout(ctx.actor);
-  const main = layout.cells.find(c => c.kind === "mainHand");
-  ctx.root.dataset.pdHighlight = "1";
-  for ( const el of ctx.root.querySelectorAll(".pd-slot") ) {
-    const kind = el.dataset.pdKind;
-    let ok = accepts(kind, facts, { strict: layout.strict }).ok;
-    if ( ok && (kind === "offHand") && main?.item?.twoHanded && (main.item.id !== facts.id) ) ok = false;
+  ctx.root.dataset.loHighlight = "1";
+  for ( const el of ctx.root.querySelectorAll(".lo-slot") ) {
+    const ok = checkPlacement(layout, el.dataset.loSlot, facts).ok;
     el.classList.toggle("is-drop-ok", ok);
     el.classList.toggle("is-drop-bad", !ok);
   }
 }
 
 function clearHighlight(root) {
-  delete root.dataset.pdHighlight;
+  delete root.dataset.loHighlight;
   for ( const el of root.querySelectorAll(".is-drop-ok, .is-drop-bad, .is-drop-hover, .is-dragging") ) {
     el.classList.remove("is-drop-ok", "is-drop-bad", "is-drop-hover", "is-dragging");
   }
@@ -240,8 +236,8 @@ function clearHighlight(root) {
 
 function endDrag(root) {
   activeDrag = null;
-  // A drag that started on one doll may have lit up another one (the tab and the dock at once).
-  for ( const doll of document.querySelectorAll(".sogrom-doll[data-pd-highlight]") ) clearHighlight(doll);
+  // A drag that started on one loadout may have lit up another one (the tab and the dock at once).
+  for ( const loadout of document.querySelectorAll(".sogrom-loadout[data-lo-highlight]") ) clearHighlight(loadout);
   clearHighlight(root);
 }
 
@@ -255,7 +251,7 @@ function endDrag(root) {
  * @param {string} key
  */
 export async function openPicker(ctx, key) {
-  const host = ctx.root.querySelector(".pd-picker-host");
+  const host = ctx.root.querySelector(".lo-picker-host");
   if ( !host ) return;
   const { layout, items, counts } = readLayout(ctx.actor);
   const cell = layout.cells.find(c => c.key === key);
@@ -286,23 +282,23 @@ export async function openPicker(ctx, key) {
     noneLabel: t("picker.none", { actor: ctx.actor.name })
   });
   host.innerHTML = html;
-  const picker = host.querySelector(".pd-picker");
+  const picker = host.querySelector(".lo-picker");
   ctx.root.classList.add("is-picking");
 
   const close = () => {
     host.innerHTML = "";
     ctx.root.classList.remove("is-picking");
-    ctx.root.querySelector(`.pd-slot[data-pd-slot="${CSS.escape(key)}"]`)?.focus();
+    ctx.root.querySelector(`.lo-slot[data-lo-slot="${CSS.escape(key)}"]`)?.focus();
   };
 
   picker.addEventListener("click", async event => {
     event.stopPropagation();
-    if ( event.target.closest("[data-pd-action='close-picker']") ) return close();
-    const choice = event.target.closest("[data-pd-choose]");
+    if ( event.target.closest("[data-lo-action='close-picker']") ) return close();
+    const choice = event.target.closest("[data-lo-choose]");
     if ( !choice ) return;
-    const item = ctx.actor.items.get(choice.dataset.pdChoose);
+    const item = ctx.actor.items.get(choice.dataset.loChoose);
     const done = await equipToSlot(ctx.actor, item, key);
-    // A successful equip re-renders the doll and takes the picker with it; only a refusal leaves
+    // A successful equip re-renders the loadout and takes the picker with it; only a refusal leaves
     // it open, where closing it would lose the player's place.
     if ( done && picker.isConnected ) close();
   });
@@ -314,16 +310,16 @@ export async function openPicker(ctx, key) {
     }
   });
 
-  const search = picker.querySelector(".pd-picker-search");
+  const search = picker.querySelector(".lo-picker-search");
   search?.addEventListener("input", () => {
     const query = search.value.trim().toLocaleLowerCase();
     let shown = 0;
-    for ( const li of picker.querySelectorAll("[data-pd-name]") ) {
-      const match = !query || li.dataset.pdName.includes(query);
+    for ( const li of picker.querySelectorAll("[data-lo-name]") ) {
+      const match = !query || li.dataset.loName.includes(query);
       li.hidden = !match;
       if ( match ) shown++;
     }
-    const empty = picker.querySelector(".pd-picker-empty");
+    const empty = picker.querySelector(".lo-picker-empty");
     if ( empty ) empty.hidden = shown > 0;
   });
   (search ?? picker.querySelector("button"))?.focus();

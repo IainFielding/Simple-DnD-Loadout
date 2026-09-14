@@ -1,5 +1,5 @@
 /**
- * A fake dnd5e character: enough of Actor for `doll/context.mjs` and `doll/actions.mjs`, with every
+ * A fake dnd5e character: enough of Actor for `loadout/context.mjs` and `loadout/actions.mjs`, with every
  * write recorded in order so tests can assert exactly what would have been sent to the server.
  */
 
