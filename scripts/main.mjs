@@ -15,6 +15,7 @@ import { registerApi } from "./api.mjs";
 import { SlotConfigApp } from "./app/slot-config.mjs";
 import { LoadoutDock, canDock } from "./sheet/dock.mjs";
 import { installSheetTab } from "./sheet/tab.mjs";
+import { installTidyTab } from "./sheet/tidy-tab.mjs";
 
 /** Whether this world runs the system the module is written for. */
 const isDnd5e = () => game.system?.id === "dnd5e";
@@ -28,15 +29,19 @@ Hooks.once("init", () => {
     return;
   }
 
-  // The loadout and its slot are partials, shared by the sheet tab and the dock; the picker is
-  // rendered on demand but preloaded so the first click does not wait on a fetch.
+  // The loadout and its slot are partials, shared by the sheet tab and the dock; the picker and the
+  // saved-sets drawer are rendered on demand but preloaded so the first click does not wait on a fetch.
   foundry.applications.handlebars.loadTemplates({
     "sogrom-lo-loadout": tpl("loadout.hbs"),
     "sogrom-lo-slot": tpl("parts/slot.hbs"),
-    "sogrom-lo-picker": tpl("parts/picker.hbs")
+    "sogrom-lo-picker": tpl("parts/picker.hbs"),
+    "sogrom-lo-sets": tpl("parts/sets.hbs")
   });
 
-  if ( setting(SETTINGS.sheetTab) ) installSheetTab();
+  if ( setting(SETTINGS.sheetTab) ) {
+    installSheetTab();
+    installTidyTab();
+  }
   registerKeybindings();
 });
 

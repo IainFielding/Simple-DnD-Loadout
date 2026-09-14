@@ -126,7 +126,7 @@ async function finishEmberCreation(actor) {
 
 /**
  * Put a character back to a known state: exactly the fixture gear, nothing equipped or attuned,
- * no slot or portrait flags.
+ * no slot, portrait or saved-set flags.
  * @param {Actor} actor
  */
 export async function resetGear(actor) {
@@ -146,7 +146,7 @@ export async function resetGear(actor) {
   }
   if ( toCreate.length ) await actor.createEmbeddedDocuments("Item", toCreate);
   if ( toUpdate.length ) await actor.updateEmbeddedDocuments("Item", toUpdate);
-  for ( const key of ["slots", "portrait"] ) {
+  for ( const key of ["slots", "portrait", "sets"] ) {
     if ( actor.getFlag(MODULE, key) !== undefined ) await actor.unsetFlag(MODULE, key);
   }
 }

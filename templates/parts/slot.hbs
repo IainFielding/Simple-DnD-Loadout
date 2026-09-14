@@ -6,10 +6,11 @@
   the item, the context-menu key opens the slot menu, Delete takes the item off.
 --}}
 <button type="button"
-        class="lo-slot lo-slot--{{kind}} {{#if item}}is-filled rarity-{{item.rarity}}{{else}}is-empty{{/if}} {{#if blocked}}is-blocked{{/if}} {{#if conflict}}is-conflict{{/if}} {{#if item.inert}}is-inert{{/if}}"
+        class="lo-slot lo-slot--{{kind}} {{#if item}}is-filled rarity-{{item.rarity}}{{else}}is-empty{{/if}} {{#if blocked}}is-blocked{{/if}} {{#if conflict}}is-conflict{{/if}} {{#if item.inert}}is-inert{{/if}} {{#if item.warnings.length}}is-warned{{/if}}"
         data-lo-slot="{{key}}" data-lo-kind="{{kind}}" data-lo-group="{{group}}"
         {{#if item}}data-lo-item="{{item.id}}" data-lo-uuid="{{item.uuid}}" {{#if draggable}}draggable="true"{{/if}}{{/if}}
         data-tooltip="{{tooltip}}" {{#if tooltipClass}}data-tooltip-class="{{tooltipClass}}"{{/if}}
+        {{#if tooltipExtras}}data-tooltip-extras="{{tooltipExtras}}"{{/if}}
         aria-label="{{ariaLabel}}">
   {{#if item}}
   <img class="lo-slot-img" src="{{item.img}}" alt="" draggable="false">
@@ -27,6 +28,12 @@
   {{/if}}
   {{#if conflict}}
   <i class="lo-badge lo-badge--conflict fa-solid fa-triangle-exclamation" inert></i>
+  {{/if}}
+  {{#if item.warnings.length}}
+  <i class="lo-badge lo-badge--warning fa-solid fa-circle-exclamation" inert></i>
+  {{/if}}
+  {{#if item.counter}}
+  <span class="lo-count {{#if item.counter.empty}}is-empty{{/if}}" aria-hidden="true">{{item.counter.text}}</span>
   {{/if}}
 
   <span class="lo-slot-label" aria-hidden="true">{{label}}</span>

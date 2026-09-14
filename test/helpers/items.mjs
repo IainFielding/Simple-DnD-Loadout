@@ -21,10 +21,12 @@ let counter = 0;
  * @param {number} [spec.sort=0]
  * @param {string} [spec.id]
  * @param {string} [spec.slot]   A pinned slot flag.
+ * @param {string} [spec.realName]  The source name of an unidentified item; `name` is then what dnd5e shows.
+ * @param {object} [spec.system]    More system data, merged over the rest.
  */
 export function source({
   name, type = "equipment", subtype = "", img = "", properties = [], equipped = false,
-  attuned = false, attunement = "", rarity = "", sort = 0, id, slot
+  attuned = false, attunement = "", rarity = "", sort = 0, id, slot, realName, system = {}
 }) {
   const _id = id ?? `item${String(++counter).padStart(12, "0")}`;
   return {
@@ -35,13 +37,15 @@ export function source({
     img,
     sort,
     flags: slot ? { "sogrom-simple-dnd5e-loadout": { slot } } : {},
+    ...(realName ? { _source: { name: realName } } : {}),
     system: {
       type: { value: subtype },
       properties: new Set(properties),
       equipped,
       attuned,
       attunement,
-      rarity
+      rarity,
+      ...system
     }
   };
 }

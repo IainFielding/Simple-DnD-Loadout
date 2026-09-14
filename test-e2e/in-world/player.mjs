@@ -36,6 +36,28 @@ export async function all() {
     report.check("…and nothing was written", !gear(stranger, "boots").system.equipped && !stranger.getFlag(MODULE, "slots"));
     await sheet.close();
 
+    // Unidentified gear gives a player neither rarity nor attunement.
+    const [mystery] = await hero.createEmbeddedDocuments("Item", [{
+      name: "[e2e] Cloak of Elvenkind", type: "equipment", img: "icons/commodities/gems/gem-rough-cushion-blue.webp",
+      system: { type: { value: "wondrous" }, rarity: "rare", properties: ["mgc"], attunement: "required", attuned: true,
+        identified: false, unidentified: { name: "[e2e] Strange Garment" } }
+    }]);
+    try {
+      await mod.actions.equipToSlot(hero, mystery, "back", { notify: false });
+      const heroSheet = hero.sheet;
+      await heroSheet.render({ force: true, tab: "sogromLoadout" });
+      const back = await waitFor(() => heroSheet.element?.querySelector(`.lo-slot[data-lo-slot="back"][data-lo-item="${mystery.id}"]`), "the unidentified cloak");
+      report.check("a player doesn't see an unidentified item's rarity", !back.className.includes("rarity-rare"), back.className);
+      report.check("…or its attunement", !back.querySelector(".lo-badge--attuned"));
+      back.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+      const menu = await waitFor(() => document.querySelector("#context-menu"), "the slot menu");
+      const labels = [...menu.querySelectorAll(".context-item")].map(li => li.textContent.trim());
+      report.check("…and isn't offered to change its attunement", !labels.some(l => /attun/i.test(l)), labels.join(" | "));
+      await heroSheet.close();
+    } finally {
+      await mystery.delete();
+    }
+
     // Foreign drops are GM-only by default.
     report.check("a player may not drop sidebar items by default", !mod.actions.mayDropForeign(game.user, hero));
   } catch ( err ) {

@@ -86,7 +86,32 @@ loadout changed. Refusals are silent, with no notification.
 
 ### `unequip(actor, slotKeyOrItem) → Promise<boolean>`
 
-Empties a slot, given its key or the item in it, and unequips the item.
+Takes an item off. Given a slot key, empties that slot. Given an item, takes it off wherever the
+loadout shows it: in a slot, or under Also Worn.
+
+### `sets(actor) → {id, name, slots, alsoWorn}[]`
+
+The actor's saved sets. `slots` maps each filled slot key to an item id. `alsoWorn` lists the ids of
+items that were worn with no slot when the set was saved.
+
+### `saveSet(actor, name) → Promise<string | null>`
+
+Saves what the actor wears now as a named set and returns its id. A set with the same name (ignoring
+case) is replaced and keeps its id. Returns `null` without saving when the name is blank, the actor
+already has 10 sets, or the user doesn't own the actor.
+
+### `applySet(actor, idOrName) → Promise<boolean>`
+
+Puts a saved set on. Its items go back in their saved slots, and every other item worn in a slot or
+under Also Worn comes off. Saved items the actor no longer carries are skipped. An item whose saved
+slot no longer exists, or no longer takes it, is still worn and placed wherever it fits. Returns
+whether the loadout changed. The `preApplySet` hook can veto the whole set, and `preEquip` is asked
+about each item the set puts into a slot: a veto from either refuses the set and nothing is written.
+Refusals are silent.
+
+### `deleteSet(actor, idOrName) → Promise<boolean>`
+
+Deletes a saved set. Its items are not affected.
 
 ### `openDock(actor) → Promise<LoadoutDock | null>`
 
@@ -96,8 +121,8 @@ creation sheet.
 
 ### `openTab(actor) → Promise<void>`
 
-Shows the Loadout tab on the actor's D&D 5e sheet, switching an open sheet to it or opening the
-sheet on it.
+Shows the Loadout tab on the actor's sheet, switching an open sheet to it or opening the sheet on
+it. Works on the D&D 5e sheet and on Tidy 5e's character sheet.
 
 ### `HOOKS`
 
@@ -110,9 +135,11 @@ Each hook receives a single object.
 | Hook | Payload | Cancellable | When |
 | --- | --- | --- | --- |
 | `simpleLoadout.ready` | `{api, version}` | No | At `ready`, after the sheet integration is installed. |
-| `simpleLoadout.preEquip` | `{actor, item, slot}` | **Yes.** Return `false` to refuse. | Before a drag, pick or `equip()` writes anything. |
+| `simpleLoadout.preEquip` | `{actor, item, slot}` | **Yes.** Return `false` to refuse. | Before a drag, pick, `equip()` or saved set writes anything. For a set, it's asked once for each item put into a slot. |
 | `simpleLoadout.equipped` | `{actor, item, slot}` | No | An item was put in a slot. It also fires for an item swapped into the slot another item came from. |
-| `simpleLoadout.unequipped` | `{actor, item, slot}` | No | An item was taken out of a slot. |
+| `simpleLoadout.unequipped` | `{actor, item, slot}` | No | An item was taken out of a slot. `slot` is `null` for an item taken off from Also Worn. |
+| `simpleLoadout.preApplySet` | `{actor, set}` | **Yes.** Return `false` to refuse. | Before a saved set is put on. The `equipped` and `unequipped` hooks still fire for each slot that changes. |
+| `simpleLoadout.setApplied` | `{actor, set, missing}` | No | A saved set was put on. `missing` names saved items the actor no longer carries. |
 
 A listener that throws is logged and ignored. A throwing `preEquip` listener doesn't count as a veto.
 
@@ -122,6 +149,7 @@ A listener that throws is logged and ignored. A throwing `preEquip` listener doe
 | --- | --- |
 | `actor.flags["sogrom-simple-dnd5e-loadout"].slots` | `{[slotKey]: itemId \| null}`, the player's placements. |
 | `actor.flags["sogrom-simple-dnd5e-loadout"].portrait` | `{src, fit: "cover" \| "contain", focus: 0–100}` |
+| `actor.flags["sogrom-simple-dnd5e-loadout"].sets` | `[{id, name, slots: {[slotKey]: itemId}, alsoWorn: itemId[], names: {[itemId]: name}}]`, the saved sets. Use `saveSet` and `deleteSet` rather than writing it. |
 | `item.flags["sogrom-simple-dnd5e-loadout"].slot` | An optional pinned slot kind. |
 
 `system.equipped` is always the source of truth. The `slots` flag records *where* the player put

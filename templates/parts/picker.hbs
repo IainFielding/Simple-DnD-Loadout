@@ -19,9 +19,16 @@
     {{#each candidates}}
     <li data-lo-name="{{searchName}}">
       <button type="button" class="lo-picker-item rarity-{{rarity}} {{#if wornIn}}is-worn{{/if}}" data-lo-choose="{{id}}"
-              data-tooltip="{{tooltip}}" data-tooltip-class="{{tooltipClass}}" data-tooltip-direction="LEFT">
+              data-tooltip="{{tooltip}}" data-tooltip-class="{{tooltipClass}}" data-tooltip-direction="LEFT"
+              {{#if tooltipExtras}}data-tooltip-extras="{{tooltipExtras}}"{{/if}}>
         <img src="{{img}}" alt="" draggable="false">
-        <span class="lo-picker-name">{{name}}</span>
+        <span class="lo-picker-text">
+          <span class="lo-picker-name">{{name}}</span>
+          {{#if stat}}<span class="lo-picker-stat">{{stat}}{{#if counter}} · {{counter.label}}{{/if}}</span>
+          {{else if counter}}<span class="lo-picker-stat">{{counter.label}}</span>{{/if}}
+          {{#each warnings}}<span class="lo-picker-warning"><i class="fa-solid fa-circle-exclamation" inert></i> {{this}}</span>{{/each}}
+        </span>
+        {{#if delta}}<span class="lo-delta {{#if delta.up}}is-up{{else}}is-down{{/if}}"><span aria-hidden="true">{{delta.text}}</span><span class="lo-visually-hidden">{{delta.label}}</span></span>{{/if}}
         {{#if wornIn}}<span class="lo-picker-meta">{{wornIn}}</span>{{/if}}
         {{#if canAttune}}<i class="lo-picker-attune fa-{{#if attuned}}solid{{else}}regular{{/if}} fa-sun" inert></i>{{/if}}
       </button>

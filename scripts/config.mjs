@@ -24,8 +24,12 @@ export const HOOKS = Object.freeze({
   preEquip: `${HOOK_PREFIX}.preEquip`,
   /** `{actor, item, slot}` — an item was placed in a slot and marked equipped. */
   equipped: `${HOOK_PREFIX}.equipped`,
-  /** `{actor, item, slot}` — an item was taken out of a slot and marked unequipped. */
-  unequipped: `${HOOK_PREFIX}.unequipped`
+  /** `{actor, item, slot}` — an item was taken out of a slot and marked unequipped; `slot` is null for an Also Worn item. */
+  unequipped: `${HOOK_PREFIX}.unequipped`,
+  /** `{actor, set}` — cancellable; return `false` to refuse putting a saved set on. */
+  preApplySet: `${HOOK_PREFIX}.preApplySet`,
+  /** `{actor, set, missing}` — a saved set was put on. */
+  setApplied: `${HOOK_PREFIX}.setApplied`
 });
 
 /** Keys of every setting this module registers. */
@@ -62,7 +66,9 @@ export const FLAGS = Object.freeze({
   /** `{[slotKey]: itemId|null}` — which item the player put in which slot. */
   slots: "slots",
   /** Optional portrait override: `{src, fit, focus}`. */
-  portrait: "portrait"
+  portrait: "portrait",
+  /** Saved sets, `[{id, name, slots, alsoWorn, names}]`. See data/sets.mjs. */
+  sets: "sets"
 });
 
 /* -------------------------------------------- */

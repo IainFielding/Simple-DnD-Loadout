@@ -44,7 +44,43 @@
       "emptySlot": "That slot is already empty.",
       "notOwner": "You don't have permission to change {actor}'s equipment.",
       "foreign": "Only items {actor} already carries can be equipped here.",
-      "vetoed": "Another module refused that change."
+      "vetoed": "Another module refused that change.",
+      "setUnknown": "That saved set no longer exists.",
+      "setsFull": "A character can keep {max} saved sets. Delete one first.",
+      "setNoName": "Give the set a name first."
+    },
+    "gear": {
+      "notProficientWeapon": "Not proficient with this weapon",
+      "notProficientArmor": "Not proficient with this armor",
+      "strength": "Needs Strength {score}",
+      "armor": "AC {ac}",
+      "armorDex": "AC {ac} + Dex",
+      "armorDexMax": "AC {ac} + Dex (max {max})",
+      "shield": "+{ac} AC",
+      "damage": "{formula} {types}",
+      "damageVersatile": "{damage}, {versatile} two-handed",
+      "better": "{delta} AC more than {item}",
+      "worse": "{delta} AC less than {item}",
+      "uses": "{value} of {max} uses left",
+      "quantity": "{value} carried"
+    },
+    "sets": {
+      "title": "Saved Sets",
+      "wearing": "Saved Sets: wearing {set}",
+      "wearingNow": "Wearing now",
+      "itemCount": "Items: {count}",
+      "none": "No saved sets yet. Dress {actor} the way you want, then name the set below and save it.",
+      "apply": "Put on {set}",
+      "delete": "Delete {set}",
+      "deleteTitle": "Delete Saved Set",
+      "deleteContent": "Delete the saved set {set}? Its items stay in the inventory.",
+      "nameLabel": "Set name",
+      "namePlaceholder": "Name this set, such as Battle",
+      "save": "Save",
+      "saveHint": "Saves everything worn now. Saving under an existing name replaces that set.",
+      "saved": "Saved the set {set}.",
+      "updated": "Updated the set {set}.",
+      "missing": "{set}: {items} no longer carried, so left out."
     },
     "menu": {
       "view": "View Item",
@@ -113,7 +149,7 @@
     "settings": {
       "sheetTab": {
         "name": "Loadout Tab",
-        "hint": "Add a Loadout tab to the D&D 5e character sheet. Reloads the world when changed."
+        "hint": "Add a Loadout tab to the D&D 5e character sheet, and to Tidy 5e Sheet's when Tidy is active. Reloads the world when changed."
       },
       "dockButton": {
         "name": "Docked Loadout Button",

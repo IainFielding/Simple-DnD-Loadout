@@ -115,7 +115,10 @@ function dropOn(slot, payload) {
 export async function all() {
   const mod = await load();
   const results = {};
-  const suites = { tabSuite, equipSuite, kitSuite, campSuite, barSuite, domSuite, dockSuite, apiSuite, settingsSuite, configSuite };
+  const suites = {
+    tabSuite, equipSuite, kitSuite, campSuite, barSuite, domSuite, clickSuite, gearSuite, setsSuite, dockSuite, apiSuite, settingsSuite,
+    configSuite
+  };
   for ( const [name, suite] of Object.entries(suites) ) {
     const report = new Report();
     const hero = game.actors.getName(HERO);
@@ -513,6 +516,236 @@ async function domSuite(report, mod, hero) {
   report.check("Delete on a focused slot unequips", true);
 
   await sheet.close();
+}
+
+/**
+ * Left-click follows the sheet's mode: in play mode a worn item is used, in edit mode it opens. The
+ * right-click menu keeps unequip and swap in both, and the dock follows the sheet it is docked to.
+ */
+async function clickSuite(report, mod, hero) {
+  const api = game.modules.get(MODULE).api;
+  const boots = gear(hero, "boots");
+  await api.equip(hero, boots, "feet");
+  const { sheet, root } = await openTab(hero);
+  const { MODES } = sheet.constructor;
+  let used = 0;
+  // Counted on the instance rather than really used, so no chat card or dialog gets in the way.
+  boots.use = async () => { used++; };
+  const filledFeet = element => element?.querySelector('.lo-slot[data-lo-slot="feet"].is-filled');
+  const portraitShown = element => {
+    const button = element?.querySelector("[data-lo-action='portrait']");
+    return !!button && (getComputedStyle(button).display !== "none");
+  };
+  try {
+    await sheet.render({ mode: MODES.PLAY });
+    await waitFor(() => !sheet.isEditMode && filledFeet(root()), "the sheet in play mode");
+    filledFeet(root()).click();
+    await waitFor(() => used === 1, "the boots to be used");
+    report.check("in play mode, clicking a worn item uses it", used === 1);
+    report.check("…and doesn't open it", !boots.sheet.rendered);
+    report.check("in play mode the portrait button is hidden", !portraitShown(root()));
+
+    filledFeet(root()).dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    const menu = await waitFor(() => document.querySelector("#context-menu"), "the slot menu in play mode");
+    const labels = [...menu.querySelectorAll(".context-item")].map(li => li.textContent.trim());
+    report.check("the right-click menu still offers Unequip and Choose Another in play mode",
+      labels.includes("Unequip") && labels.some(l => l.startsWith("Choose Another")), labels.join(" | "));
+    menu.remove();
+
+    await sheet.render({ mode: MODES.EDIT });
+    await waitFor(() => sheet.isEditMode && filledFeet(root()), "the sheet in edit mode");
+    filledFeet(root()).click();
+    await waitFor(() => boots.sheet.rendered, "the boots' sheet to open");
+    report.check("in edit mode, clicking a worn item opens it", used === 1);
+    report.check("in edit mode the portrait button is available", portraitShown(root()));
+    await boots.sheet.close();
+
+    const dock = await mod.dock.LoadoutDock.open(sheet);
+    (await waitFor(() => filledFeet(dock.element), "the boots in the dock")).click();
+    await waitFor(() => boots.sheet.rendered, "the boots' sheet from the dock");
+    report.check("the dock opens the item while its sheet is in edit mode", used === 1);
+    report.check("…and shows the portrait button", portraitShown(dock.element));
+    await boots.sheet.close();
+    await sheet.render({ mode: MODES.PLAY });
+    await waitFor(() => !sheet.isEditMode && filledFeet(dock.element) && !portraitShown(dock.element), "play mode with the dock open");
+    filledFeet(dock.element).click();
+    await waitFor(() => used === 2, "the boots to be used from the dock");
+    report.check("…and uses it once the sheet is back in play mode", used === 2);
+    report.check("…and hides the portrait button without being redrawn", !portraitShown(dock.element));
+    await dock.close();
+
+    await sheet.render({ mode: MODES.PLAY });
+    await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="head"].is-empty'), "an empty head slot");
+    root().querySelector('.lo-slot[data-lo-slot="head"]').click();
+    report.check("in play mode an empty slot still opens the picker",
+      !!(await waitFor(() => root()?.querySelector(".lo-picker"), "the head picker in play mode")));
+  } finally {
+    delete boots.use;
+    if ( boots.sheet.rendered ) await boots.sheet.close();
+    await sheet.render({ mode: MODES.PLAY });
+    await sheet.close();
+  }
+}
+
+/**
+ * What the loadout says about gear, read from real dnd5e data: proficiency and Strength warnings,
+ * charges, the picker's numbers, unidentified items, and taking an Also Worn item off from its menu.
+ */
+async function gearSuite(report, mod, hero) {
+  const api = game.modules.get(MODULE).api;
+  const created = await hero.createEmbeddedDocuments("Item", [
+    { name: "[e2e] Plate Armor", type: "equipment", img: "icons/equipment/chest/breastplate-banded-steel.webp",
+      system: { type: { value: "heavy" }, armor: { value: 18 }, strength: 18 } },
+    { name: "[e2e] Wand of Web", type: "consumable", img: "icons/weapons/wands/wand-gem-violet.webp",
+      system: { type: { value: "wand" }, uses: { max: "7", spent: 3 } } },
+    { name: "[e2e] Broadsword", type: "weapon", img: "icons/weapons/swords/sword-guard-steel-green.webp",
+      system: { type: { value: "martialM" }, properties: ["ver"], damage: { base: { number: 1, denomination: 8, types: ["slashing"] } } } },
+    { name: "[e2e] Cloak of Elvenkind", type: "equipment", img: "icons/commodities/gems/gem-rough-cushion-blue.webp",
+      system: { type: { value: "wondrous" }, rarity: "rare", properties: ["mgc"], attunement: "required",
+        identified: false, unidentified: { name: "[e2e] Strange Garment" } } }
+  ]);
+  // By source name: the created documents are not guaranteed to come back in the order they were sent
+  // (a shuffled order once equipped the broadsword as the "wand"), and an unidentified item's prepared name
+  // is its unidentified one.
+  const named = name => created.find(i => i._source.name === name);
+  const [plate, wand, broadsword, mystery] = ["[e2e] Plate Armor", "[e2e] Wand of Web", "[e2e] Broadsword", "[e2e] Cloak of Elvenkind"].map(named);
+  const priorProf = [...(hero.system.traits.armorProf.value ?? [])];
+  const { sheet, root } = await openTab(hero);
+  const slotEl = key => root()?.querySelector(`.lo-slot[data-lo-slot="${key}"]`);
+  const menuItem = async (target, label) => {
+    target.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    const menu = await waitFor(() => document.querySelector("#context-menu"), `the menu for ${label}`);
+    [...menu.querySelectorAll(".context-item")].find(li => li.textContent.trim().startsWith(label))?.click();
+  };
+  try {
+    // Proficiency and Strength, from dnd5e's own proficiency multiplier and the item's requirement.
+    await hero.update({ "system.traits.armorProf.value": [] });
+    await api.equip(hero, gear(hero, "chain"), "body");
+    const warned = await waitFor(() => slotEl("body")?.classList.contains("is-warned") && slotEl("body"), "the chain mail warning");
+    report.check("armour without proficiency is marked on its slot", !!warned.querySelector(".lo-badge--warning"));
+    report.check("…and the warning is in the item's tooltip", (warned.dataset.tooltipExtras ?? "").includes("Not proficient with this armor"), warned.dataset.tooltipExtras);
+    report.check("…and in the slot's accessible name", warned.getAttribute("aria-label").includes("Not proficient"), warned.getAttribute("aria-label"));
+    await hero.update({ "system.traits.armorProf.value": ["hvy"] });
+    await waitFor(() => slotEl("body") && !slotEl("body").classList.contains("is-warned"), "the warning to clear with proficiency");
+    report.check("gaining the proficiency clears the warning", true);
+
+    await api.equip(hero, plate, "body");
+    const heavy = await waitFor(() => slotEl("body")?.classList.contains("is-warned") && slotEl("body"), "the Strength warning");
+    report.check("armour needing more Strength than the character has warns", (heavy.dataset.tooltipExtras ?? "").includes("Needs Strength 18"), heavy.dataset.tooltipExtras);
+
+    // Charges.
+    await api.equip(hero, wand, "mainHand");
+    const count = await waitFor(() => slotEl("mainHand")?.querySelector(".lo-count"), "the charge counter");
+    report.equal("a wand shows the charges it has left", count.textContent.trim(), "4/7");
+
+    // The picker's numbers: armour class against what is worn, and a versatile weapon's damage.
+    await api.equip(hero, gear(hero, "leather"), "body");
+    await waitFor(() => slotEl("body")?.dataset.loItem === gear(hero, "leather").id, "leather on the body");
+    await menuItem(slotEl("body"), "Choose Another");
+    const bodyPicker = await waitFor(() => root()?.querySelector(".lo-picker"), "the body picker");
+    const chainRow = bodyPicker.querySelector(`[data-lo-choose="${gear(hero, "chain").id}"]`);
+    report.check("the picker shows armour class", chainRow?.querySelector(".lo-picker-stat")?.textContent.includes("AC 16"), chainRow?.textContent);
+    report.equal("…and how it compares with the armour worn now", chainRow?.querySelector(".lo-delta [aria-hidden]")?.textContent.trim(), "+5");
+    bodyPicker.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    await api.unequip(hero, "mainHand");
+    await waitFor(() => slotEl("mainHand")?.classList.contains("is-empty"), "an empty main hand");
+    slotEl("mainHand").click();
+    const handPicker = await waitFor(() => root()?.querySelector(".lo-picker"), "the main hand picker");
+    const damage = handPicker.querySelector(`[data-lo-choose="${broadsword.id}"] .lo-picker-stat`)?.textContent ?? "";
+    report.check("the picker shows a versatile weapon's damage both ways", damage.includes("1d8") && damage.includes("1d10"), damage);
+    handPicker.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    // Unidentified: placed by its real name, and it stays put when identified.
+    await api.equip(hero, mystery);
+    report.equal("an unidentified cloak goes on the back by its real name", api.layout(hero).slots.find(s => s.key === "back").itemId, mystery.id);
+    report.equal("…while everyone sees its unidentified name", mystery.name, "[e2e] Strange Garment");
+    await waitFor(() => slotEl("back")?.dataset.loItem === mystery.id, "the cloak on the back");
+    report.check("the Gamemaster still sees its rarity", slotEl("back").classList.contains("rarity-rare"));
+    await mystery.update({ "system.identified": true });
+    report.equal("identifying it moves nothing", api.layout(hero).slots.find(s => s.key === "back").itemId, mystery.id);
+
+    // Also Worn: the chip's Unequip goes through the loadout, so the hook fires with no slot.
+    await hero.updateEmbeddedDocuments("Item", ["ringProtection", "ringWarmth", "ringSwimming"]
+      .map(k => ({ _id: gear(hero, k).id, "system.equipped": true })));
+    const chip = await waitFor(() => root()?.querySelector(".lo-chip"), "an Also Worn chip");
+    const chipItem = hero.items.get(chip.dataset.loUnslotted);
+    let hookSlot;
+    const hook = Hooks.on("simpleLoadout.unequipped", p => { if ( p.item?.id === chipItem.id ) hookSlot = p.slot; });
+    await menuItem(chip, "Unequip");
+    await waitFor(() => !chipItem.system.equipped, "the Also Worn ring to come off");
+    Hooks.off("simpleLoadout.unequipped", hook);
+    report.equal("Unequip on an Also Worn item fires unequipped with no slot", hookSlot, null);
+  } finally {
+    await sheet.close();
+    await hero.update({ "system.traits.armorProf.value": priorProf });
+  }
+}
+
+/** Saved sets through the real drawer: save, switch, put back on, delete; and nothing moves. */
+async function setsSuite(report, mod, hero) {
+  const api = game.modules.get(MODULE).api;
+  await api.equip(hero, gear(hero, "chain"), "body");
+  await api.equip(hero, gear(hero, "longsword"), "mainHand");
+  await api.equip(hero, gear(hero, "shield"), "offHand");
+  const { sheet, root } = await openTab(hero);
+  const setsButton = () => root()?.querySelector("[data-lo-action='sets']");
+  try {
+    await waitFor(() => root()?.querySelector('.lo-slot[data-lo-slot="offHand"].is-filled'), "the kit on");
+    const before = slotRects(root());
+    report.check("the loadout has a saved-sets button", !!setsButton());
+
+    // Save.
+    setsButton().click();
+    const drawer = await waitFor(() => root()?.querySelector(".lo-sets"), "the sets drawer");
+    report.check("with no sets, the drawer says how to make one", !!drawer.querySelector(".lo-picker-empty"));
+    const nameField = drawer.querySelector(".lo-sets-name");
+    nameField.value = "Battle";
+    let sheetSubmits = 0;
+    const submitHook = Hooks.on("preUpdateActor", actor => { if ( actor === hero ) sheetSubmits++; });
+    nameField.dispatchEvent(new Event("change", { bubbles: true }));
+    await new Promise(r => setTimeout(r, 250));
+    Hooks.off("preUpdateActor", submitHook);
+    report.equal("typing a set name does not submit the character sheet", sheetSubmits, 0);
+    report.check("…and the drawer stays open", !!root()?.querySelector(".lo-sets"));
+    drawer.querySelector("[data-lo-action='save-set']").click();
+    await waitFor(() => api.sets(hero).length === 1, "the set to save");
+    const named = await waitFor(() => root()?.querySelector(".lo-sets-button.is-current"), "the button to name the set");
+    report.equal("the button names the set being worn", named.textContent.trim(), "Battle");
+    report.equal("naming the set moved no slot", movedSlots(before, slotRects(root())), []);
+
+    // Change clothes, then put the set back on from the drawer.
+    await api.equip(hero, gear(hero, "leather"), "body");
+    await api.equip(hero, gear(hero, "greatsword"), "mainHand");
+    const greatswordId = gear(hero, "greatsword").id;
+    await waitFor(() => (root()?.querySelector('.lo-slot[data-lo-slot="mainHand"]')?.dataset.loItem === greatswordId)
+      && root().querySelector(".lo-sets-button:not(.is-current)"), "the new gear to render and the button to stop naming the set");
+    report.check("changing gear clears the name", true);
+    setsButton().click();
+    const drawer2 = await waitFor(() => root()?.querySelector(".lo-sets"), "the sets drawer again");
+    drawer2.querySelector("[data-lo-apply-set]").click();
+    await waitFor(() => gear(hero, "chain").system.equipped && gear(hero, "shield").system.equipped, "the set to go back on");
+    report.check("putting the set on takes the rest off", !gear(hero, "leather").system.equipped && !gear(hero, "greatsword").system.equipped);
+    report.equal("…and puts the shield back in the off hand", api.layout(hero).slots.find(s => s.key === "offHand").itemId, gear(hero, "shield").id);
+
+    // The dock has the same button.
+    const dock = await mod.dock.LoadoutDock.open(sheet);
+    const dockButton = await waitFor(() => dock.element?.querySelector(".lo-sets-button.is-current"), "the dock's set button");
+    report.equal("the dock names the set too", dockButton.textContent.trim(), "Battle");
+    await dock.close();
+
+    // Delete, confirming in the dialog.
+    await waitFor(() => root()?.querySelector(".lo-sets-button.is-current"), "re-render");
+    setsButton().click();
+    const drawer3 = await waitFor(() => root()?.querySelector(".lo-sets"), "the sets drawer to delete from");
+    drawer3.querySelector(".lo-sets-delete").click();
+    const yes = await waitFor(() => document.querySelector(".application.dialog [data-action='yes']"), "the delete confirmation");
+    yes.click();
+    await waitFor(() => api.sets(hero).length === 0, "the set to delete");
+    report.check("deleting a set leaves the gear on", gear(hero, "chain").system.equipped);
+  } finally {
+    await sheet.close();
+  }
 }
 
 /** The dock follows the sheet without wrapping it. */

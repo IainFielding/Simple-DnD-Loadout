@@ -23,6 +23,7 @@
     </header>
     {{/if}}
 
+    {{!-- Hidden in play mode by CSS, from data-lo-mode (controller.mjs#refreshMode). --}}
     {{#if editable}}
     <button type="button" class="lo-portrait-config" data-lo-action="portrait"
             data-tooltip="{{localize "sogrom-simple-dnd5e-loadout.portrait.configure"}}"
@@ -78,9 +79,11 @@
       <li>
         <button type="button" class="lo-chip rarity-{{rarity}}" data-lo-unslotted="{{id}}" data-lo-uuid="{{uuid}}"
                 {{#if draggable}}draggable="true"{{/if}}
-                data-tooltip="{{tooltip}}" data-tooltip-class="{{tooltipClass}}" aria-label="{{name}}">
+                data-tooltip="{{tooltip}}" data-tooltip-class="{{tooltipClass}}" aria-label="{{name}}"
+                {{#if tooltipExtras}}data-tooltip-extras="{{tooltipExtras}}"{{/if}}>
           <img src="{{img}}" alt="" draggable="false">
           <span>{{name}}</span>
+          {{#if warnings.length}}<i class="lo-chip-warning fa-solid fa-circle-exclamation" inert></i>{{/if}}
         </button>
       </li>
       {{/each}}
@@ -89,6 +92,14 @@
   {{/if}}
 
   <footer class="lo-stats">
+    {{#if sets}}
+    <button type="button" class="lo-sets-button {{#if sets.current}}is-current{{/if}}" data-lo-action="sets"
+            data-tooltip="{{sets.label}}" aria-label="{{sets.label}}" aria-haspopup="dialog">
+      <i class="fa-solid fa-layer-group" inert></i>
+      {{#if sets.current}}<span class="lo-sets-current">{{sets.current}}</span>{{/if}}
+    </button>
+    {{/if}}
+
     {{#if stats.ac includeZero=true}}
     <div class="lo-stat lo-stat--ac" data-tooltip="{{localize "sogrom-simple-dnd5e-loadout.stats.ac"}}">
       <i class="fa-solid fa-shield-halved" inert></i>

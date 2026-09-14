@@ -8,8 +8,9 @@
  *    part's context, so the tab renders with the rest of the sheet.
  * 3. `renderCharacterActorSheet` binds the freshly rendered loadout after each render.
  *
- * Only the system's character sheet gets the tab. Other character sheets (Tidy 5e and friends)
- * still get the docked loadout through the header button, which works with any framed sheet.
+ * This is the system's own character sheet. Tidy 5e gets the same tab through its API
+ * (sheet/tidy-tab.mjs); any other character sheet still gets the docked loadout through the header
+ * button, which works with any framed sheet.
  */
 
 import { MODULE_ID, log, tpl } from "../config.mjs";
@@ -17,6 +18,7 @@ import { buildLoadoutContext } from "../loadout/context.mjs";
 import { bindLoadout } from "../loadout/controller.mjs";
 import { PortraitConfig } from "../app/portrait-config.mjs";
 import { injectTab } from "./tab-inject.mjs";
+import { isTidySheet, sheetMode } from "./sheet-mode.mjs";
 
 /** The tab's id, on the sheet and in `sheet.changeTab`. */
 export const TAB_ID = "sogromLoadout";
@@ -54,6 +56,7 @@ export function installSheetTab() {
     bindLoadout(root, {
       actor: sheet.document,
       editable: sheet.isEditable,
+      mode: () => sheetMode(sheet),
       onPortrait: () => new PortraitConfig({ document: sheet.document }).render({ force: true })
     });
   });
@@ -69,6 +72,13 @@ export function installSheetTab() {
 export async function showTab(actor) {
   const sheet = actor?.sheet;
   if ( !sheet ) return;
+  // Tidy 5e draws and switches its own tabs; ApplicationV2's changeTab does nothing there.
+  if ( isTidySheet(sheet) ) {
+    if ( !sheet.rendered ) await sheet.render({ force: true });
+    sheet.selectTab(TAB_ID);
+    sheet.bringToFront?.();
+    return;
+  }
   if ( sheet.rendered ) {
     sheet.changeTab?.(TAB_ID, "primary");
     sheet.bringToFront?.();

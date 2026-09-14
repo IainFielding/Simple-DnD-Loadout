@@ -12,15 +12,19 @@
  */
 
 import { MODULE_ID, t, tpl } from "../config.mjs";
-import { SLOT_KINDS } from "../data/slots.mjs";
 import { itemFacts } from "../data/item-facts.mjs";
-import { candidatesFor, checkPlacement } from "../data/layout.mjs";
-import { rarityClass } from "../data/stats.mjs";
-import { readLayout, slotLabel } from "./context.mjs";
-import { dropItemOnSlot, equipToSlot, toggleAttunement, unequipSlot } from "./actions.mjs";
+import { checkPlacement } from "../data/layout.mjs";
+import { buildPickerContext, buildSetsContext, isConcealed, readLayout, readSets } from "./context.mjs";
+import {
+  applySet, deleteSet, dropItemOnSlot, equipToSlot, saveSet, toggleAttunement, unequipItem, unequipSlot
+} from "./actions.mjs";
 
-/** Marks a root as bound, so a double call on the same element is harmless. */
-const BOUND = new WeakSet();
+/**
+ * Each bound root's context. Marks a root as bound, so a double call on the same element is harmless,
+ * and lets a drawer find the loadout that replaced the one it was opened from (see {@link liveContext}).
+ * @type {WeakMap<HTMLElement, object>}
+ */
+const CONTEXTS = new WeakMap();
 
 /**
  * The drag in progress that started on a loadout. Held here because a `dragover` handler cannot read
@@ -36,11 +40,14 @@ let activeDrag = null;
  * @param {Actor} options.actor
  * @param {boolean} options.editable
  * @param {Function} [options.onPortrait]  Opens the portrait settings.
+ * @param {Function} [options.mode]  The mode of the sheet the loadout belongs to, read on each click:
+ *   `"play"`, `"edit"` or null. See sheet/sheet-mode.mjs.
  */
-export function bindLoadout(root, { actor, editable, onPortrait }) {
-  if ( !root || BOUND.has(root) ) return;
-  BOUND.add(root);
-  const ctx = { root, actor, editable, onPortrait };
+export function bindLoadout(root, { actor, editable, onPortrait, mode }) {
+  if ( !root || CONTEXTS.has(root) ) return;
+  const ctx = { root, actor, editable, onPortrait, mode };
+  CONTEXTS.set(root, ctx);
+  refreshMode(root);
 
   root.addEventListener("click", event => onClick(event, ctx));
   root.addEventListener("keydown", event => onKeyDown(event, ctx));
@@ -57,22 +64,58 @@ export function bindLoadout(root, { actor, editable, onPortrait }) {
   createContextMenu(ctx);
 }
 
+/**
+ * Mirror the sheet's mode onto a bound loadout as `data-lo-mode`, for what only shows in one mode (the
+ * portrait button waits for edit mode). Called on every bind, which covers the sheet tabs: a mode
+ * change redraws them. The dock is not redrawn with its sheet, so it calls this when the sheet's
+ * classes change.
+ * @param {HTMLElement|null} root  A `.sogrom-loadout` element.
+ */
+export function refreshMode(root) {
+  const ctx = root && CONTEXTS.get(root);
+  if ( !ctx ) return;
+  const mode = ctx.mode?.() ?? null;
+  if ( mode ) root.dataset.loMode = mode;
+  else delete root.dataset.loMode;
+}
+
 /* -------------------------------------------- */
 /*  Click & keyboard                            */
 /* -------------------------------------------- */
 
 function onClick(event, ctx) {
   const action = event.target.closest("[data-lo-action]")?.dataset.loAction;
-  if ( action === "portrait" ) return ctx.onPortrait?.();
+  // The background picture is sheet set-up, so like the sheet's own editing it waits for edit mode.
+  if ( action === "portrait" ) return (ctx.mode?.() === "play") ? undefined : ctx.onPortrait?.();
+  if ( (action === "sets") && ctx.editable ) return openSets(ctx);
 
   const chip = event.target.closest("[data-lo-unslotted]");
-  if ( chip ) return ctx.actor.items.get(chip.dataset.loUnslotted)?.sheet?.render(true);
+  if ( chip ) return activateItem(ctx, ctx.actor.items.get(chip.dataset.loUnslotted), event);
 
   const slot = event.target.closest(".lo-slot");
   if ( !slot || slot.closest(".lo-picker") ) return;
   const item = ctx.actor.items.get(slot.dataset.loItem ?? "");
-  if ( item ) return item.sheet?.render(true);
+  // Packed camp clothes are not worn, so there is nothing to use: they always open.
+  if ( item ) return activateItem(ctx, item, event, { packed: slot.dataset.loGroup === "camp" });
   if ( ctx.editable && !slot.classList.contains("is-blocked") ) openPicker(ctx, slot.dataset.loSlot);
+}
+
+/**
+ * Left-click on a worn item. As on the sheet's own inventory: in play mode it is used, in edit mode
+ * (or on a sheet with no modes) it opens. Someone who cannot use the character's items, and a packed
+ * item, always get the item's sheet. Swapping and unequipping stay on the right-click menu in both
+ * modes.
+ * @param {object} ctx
+ * @param {Item} item
+ * @param {Event} event
+ * @param {object} [options]
+ * @param {boolean} [options.packed]
+ */
+function activateItem(ctx, item, event, { packed = false } = {}) {
+  if ( !item ) return;
+  const play = ctx.mode?.() === "play";
+  if ( play && !packed && ctx.actor.isOwner ) return item.use({ event });
+  return item.sheet?.render(true);
 }
 
 function onKeyDown(event, ctx) {
@@ -94,8 +137,10 @@ function createContextMenu(ctx) {
   const inCamp = target => target.dataset.loGroup === "camp";
   const canAttuneItem = target => {
     const item = itemOf(target);
-    // A packed item is not worn, so attunement is not offered from its camp slot.
-    return ctx.editable && !!item && !inCamp(target) && ["required", "optional"].includes(item.system.attunement);
+    // A packed item is not worn, so attunement is not offered from its camp slot; and as on dnd5e's
+    // own sheet, a player is not offered it for an item they have not identified.
+    return ctx.editable && !!item && !inCamp(target) && ["required", "optional"].includes(item.system.attunement)
+      && !isConcealed(itemFacts(item));
   };
 
   new ContextMenu(ctx.root, ".lo-slot.is-filled, .lo-chip", [
@@ -140,7 +185,7 @@ function createContextMenu(ctx) {
       visible: target => ctx.editable && !inCamp(target),
       onClick: (_event, target) => {
         if ( target.dataset.loSlot ) return unequipSlot(ctx.actor, target.dataset.loSlot);
-        return itemOf(target)?.update({ "system.equipped": false });
+        return unequipItem(ctx.actor, itemOf(target));
       }
     }
   ], { jQuery: false, fixed: true });
@@ -242,8 +287,61 @@ function endDrag(root) {
 }
 
 /* -------------------------------------------- */
-/*  Picker                                      */
+/*  Drawers: the picker and saved sets          */
 /* -------------------------------------------- */
+
+/**
+ * The context to open a drawer in, once its template has rendered. Rendering a template is async, and
+ * a sheet can redraw the loadout in that moment (Tidy 5e does when it switches to the tab); a drawer
+ * put into the replaced element would open where nobody can see it. So an old root hands over to the
+ * loadout for the same actor now drawn in the same window.
+ * @param {object} ctx
+ * @param {Element|null} scope  The window the loadout was in when the drawer was asked for.
+ * @returns {object|null}
+ */
+function liveContext(ctx, scope) {
+  if ( ctx.root.isConnected ) return ctx;
+  const root = scope?.isConnected
+    ? scope.querySelector(`.sogrom-loadout[data-lo-actor="${CSS.escape(ctx.actor.uuid)}"]`)
+    : null;
+  return (root && CONTEXTS.get(root)) ?? null;
+}
+
+/**
+ * Show a drawer in the loadout's drawer host, replacing any drawer already open.
+ * @param {object} ctx
+ * @param {string} html
+ * @param {HTMLElement|null} returnFocus  Focused again when the drawer closes.
+ * @returns {{drawer: HTMLElement, close: Function}|null}
+ */
+function openDrawer(ctx, html, returnFocus) {
+  const host = ctx.root.querySelector(".lo-picker-host");
+  if ( !host ) return null;
+  host.innerHTML = html;
+  const drawer = host.firstElementChild;
+  ctx.root.classList.add("is-picking");
+  const close = () => {
+    host.innerHTML = "";
+    ctx.root.classList.remove("is-picking");
+    returnFocus?.focus();
+  };
+  drawer.addEventListener("keydown", event => {
+    // Enter in a text field inside the sheet's form would submit the whole sheet.
+    if ( (event.key === "Enter") && event.target.matches?.("input") ) event.preventDefault();
+    if ( event.key !== "Escape" ) return;
+    event.preventDefault();
+    event.stopPropagation();
+    close();
+  });
+  drawer.addEventListener("click", event => {
+    event.stopPropagation();
+    if ( event.target.closest("[data-lo-action='close-picker']") ) close();
+  });
+  // In the sheet tab the drawer is inside dnd5e's sheet form, which submits on every `change` that
+  // reaches it. A drawer's fields are the loadout's own business, never the sheet's.
+  drawer.addEventListener("change", event => event.stopPropagation());
+  return { drawer, close };
+}
 
 /**
  * Open the choose-an-item drawer for a slot.
@@ -251,49 +349,17 @@ function endDrag(root) {
  * @param {string} key
  */
 export async function openPicker(ctx, key) {
-  const host = ctx.root.querySelector(".lo-picker-host");
-  if ( !host ) return;
-  const { layout, items, counts } = readLayout(ctx.actor);
-  const cell = layout.cells.find(c => c.key === key);
-  if ( !cell ) return;
-
-  const candidates = candidatesFor(layout, key, items).map(({ item, wornIn }) => {
-    const where = wornIn ? layout.cells.find(c => c.key === wornIn) : null;
-    return {
-      id: item.id,
-      name: item.name,
-      searchName: item.name.toLocaleLowerCase(),
-      img: item.img || "icons/svg/item-bag.svg",
-      rarity: rarityClass(item.rarity),
-      wornIn: where ? t("picker.wornIn", { slot: slotLabel(where, counts) }) : "",
-      canAttune: ["required", "optional"].includes(item.attunement),
-      attuned: item.attuned,
-      tooltip: `<section class="loading" data-uuid="${item.uuid}"><i class="fas fa-spinner fa-spin-pulse" inert></i></section>`,
-      tooltipClass: "dnd5e2 dnd5e-tooltip item-tooltip document-tooltip"
-    };
-  });
-
-  const html = await foundry.applications.handlebars.renderTemplate(tpl("parts/picker.hbs"), {
-    key,
-    label: slotLabel(cell, counts),
-    placeholder: SLOT_KINDS[cell.kind].placeholder,
-    candidates,
-    searchLabel: t("picker.search", { actor: ctx.actor.name }),
-    noneLabel: t("picker.none", { actor: ctx.actor.name })
-  });
-  host.innerHTML = html;
-  const picker = host.querySelector(".lo-picker");
-  ctx.root.classList.add("is-picking");
-
-  const close = () => {
-    host.innerHTML = "";
-    ctx.root.classList.remove("is-picking");
-    ctx.root.querySelector(`.lo-slot[data-lo-slot="${CSS.escape(key)}"]`)?.focus();
-  };
+  const context = buildPickerContext(ctx.actor, key);
+  if ( !context ) return;
+  const scope = ctx.root.closest(".application");
+  const html = await foundry.applications.handlebars.renderTemplate(tpl("parts/picker.hbs"), context);
+  ctx = liveContext(ctx, scope);
+  if ( !ctx ) return;
+  const opened = openDrawer(ctx, html, ctx.root.querySelector(`.lo-slot[data-lo-slot="${CSS.escape(key)}"]`));
+  if ( !opened ) return;
+  const { drawer: picker, close } = opened;
 
   picker.addEventListener("click", async event => {
-    event.stopPropagation();
-    if ( event.target.closest("[data-lo-action='close-picker']") ) return close();
     const choice = event.target.closest("[data-lo-choose]");
     if ( !choice ) return;
     const item = ctx.actor.items.get(choice.dataset.loChoose);
@@ -301,13 +367,6 @@ export async function openPicker(ctx, key) {
     // A successful equip re-renders the loadout and takes the picker with it; only a refusal leaves
     // it open, where closing it would lose the player's place.
     if ( done && picker.isConnected ) close();
-  });
-  picker.addEventListener("keydown", event => {
-    if ( event.key === "Escape" ) {
-      event.preventDefault();
-      event.stopPropagation();
-      close();
-    }
   });
 
   const search = picker.querySelector(".lo-picker-search");
@@ -323,4 +382,57 @@ export async function openPicker(ctx, key) {
     if ( empty ) empty.hidden = shown > 0;
   });
   (search ?? picker.querySelector("button"))?.focus();
+}
+
+/**
+ * Open the saved-sets drawer: put a set on, delete one, or save what is worn now.
+ * @param {object} ctx
+ */
+export async function openSets(ctx) {
+  const scope = ctx.root.closest(".application");
+  const html = await foundry.applications.handlebars.renderTemplate(tpl("parts/sets.hbs"), buildSetsContext(ctx.actor));
+  ctx = liveContext(ctx, scope);
+  if ( !ctx ) return;
+  const opened = openDrawer(ctx, html, ctx.root.querySelector("[data-lo-action='sets']"));
+  if ( !opened ) return;
+  const { drawer, close } = opened;
+  // Every change re-renders the loadout, which takes the drawer with it; closing by hand covers the
+  // cases that change nothing.
+  const closeIfStill = () => drawer.isConnected && close();
+
+  drawer.addEventListener("click", async event => {
+    const apply = event.target.closest("[data-lo-apply-set]");
+    if ( apply ) {
+      await applySet(ctx.actor, apply.dataset.loApplySet);
+      return closeIfStill();
+    }
+    const remove = event.target.closest("[data-lo-delete-set]");
+    if ( remove ) {
+      const set = readSets(ctx.actor).find(s => s.id === remove.dataset.loDeleteSet);
+      if ( !set ) return;
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: t("sets.deleteTitle") },
+        content: `<p>${foundry.utils.escapeHTML(t("sets.deleteContent", { set: set.name }))}</p>`,
+        rejectClose: false
+      });
+      if ( confirmed ) await deleteSet(ctx.actor, set.id);
+    }
+  });
+
+  const input = drawer.querySelector(".lo-sets-name");
+  const save = async () => {
+    const saved = await saveSet(ctx.actor, input?.value ?? "");
+    if ( saved ) closeIfStill();
+    else input?.focus();
+  };
+  drawer.querySelector("[data-lo-action='save-set']")?.addEventListener("click", save);
+  input?.addEventListener("keydown", event => {
+    if ( event.key !== "Enter" ) return;
+    // Enter in a field of the sheet's form would otherwise submit the whole sheet.
+    event.preventDefault();
+    event.stopPropagation();
+    save();
+  });
+
+  (drawer.querySelector(".lo-sets-item.is-current") ?? drawer.querySelector("[data-lo-apply-set]") ?? input)?.focus();
 }

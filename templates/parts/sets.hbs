@@ -1,0 +1,48 @@
+{{!--
+  The saved-sets drawer, rendered on demand by scripts/loadout/controller.mjs#openSets into the
+  loadout's .lo-picker-host, from scripts/loadout/context.mjs#buildSetsContext.
+--}}
+<div class="lo-picker lo-sets" role="dialog" aria-label="{{localize "sogrom-simple-dnd5e-loadout.sets.title"}}">
+  <header class="lo-picker-head">
+    <i class="lo-picker-icon lo-sets-icon fa-solid fa-layer-group" inert></i>
+    <h3 class="lo-picker-title">{{localize "sogrom-simple-dnd5e-loadout.sets.title"}}</h3>
+    <button type="button" class="lo-icon-button" data-lo-action="close-picker"
+            aria-label="{{localize "sogrom-simple-dnd5e-loadout.picker.close"}}">
+      <i class="fa-solid fa-xmark" inert></i>
+    </button>
+  </header>
+
+  {{#if sets.length}}
+  <ul class="lo-picker-list">
+    {{#each sets}}
+    <li class="lo-sets-row">
+      <button type="button" class="lo-picker-item lo-sets-item {{#if current}}is-current{{/if}}" data-lo-apply-set="{{id}}"
+              aria-label="{{applyLabel}}" {{#if current}}aria-current="true"{{/if}}>
+        <i class="lo-sets-mark fa-solid {{#if current}}fa-check{{else}}fa-shirt{{/if}}" inert></i>
+        <span class="lo-picker-name">{{name}}</span>
+        <span class="lo-picker-meta">{{meta}}</span>
+      </button>
+      <button type="button" class="lo-icon-button lo-sets-delete" data-lo-delete-set="{{id}}"
+              data-tooltip="{{deleteLabel}}" aria-label="{{deleteLabel}}">
+        <i class="fa-solid fa-trash" inert></i>
+      </button>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="lo-picker-empty">{{none}}</p>
+  {{/if}}
+
+  {{!-- Not a <form>: in the sheet tab this sits inside dnd5e's sheet, which is itself a form, and a
+        nested form is dropped by the HTML parser. The input has no name so it can never be part of
+        the sheet's own form data. --}}
+  <div class="lo-sets-save" role="group" aria-label="{{localize "sogrom-simple-dnd5e-loadout.sets.nameLabel"}}">
+    <input type="text" class="lo-sets-name" maxlength="40" autocomplete="off" spellcheck="false"
+           placeholder="{{localize "sogrom-simple-dnd5e-loadout.sets.namePlaceholder"}}"
+           aria-label="{{localize "sogrom-simple-dnd5e-loadout.sets.nameLabel"}}">
+    <button type="button" class="lo-sets-save-button" data-lo-action="save-set">
+      <i class="fa-solid fa-floppy-disk" inert></i> {{localize "sogrom-simple-dnd5e-loadout.sets.save"}}
+    </button>
+    <p class="lo-sets-hint">{{localize "sogrom-simple-dnd5e-loadout.sets.saveHint"}}</p>
+  </div>
+</div>

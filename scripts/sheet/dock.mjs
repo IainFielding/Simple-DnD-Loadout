@@ -20,8 +20,9 @@
 import { MODULE_ID, SETTINGS, log, setting, t, tpl } from "../config.mjs";
 import { DOCK_WIDTH, dockPosition } from "../data/dock-geometry.mjs";
 import { buildLoadoutContext } from "../loadout/context.mjs";
-import { bindLoadout } from "../loadout/controller.mjs";
+import { bindLoadout, refreshMode } from "../loadout/controller.mjs";
 import { PortraitConfig } from "../app/portrait-config.mjs";
+import { sheetMode } from "./sheet-mode.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -143,8 +144,12 @@ export class LoadoutDock extends HandlebarsApplicationMixin(ApplicationV2) {
     this.sheet.addEventListener("position", this.#onPosition);
     this.sheet.addEventListener("close", this.#onSheetClose);
     this.sheet.element?.addEventListener("pointerdown", this.#onSheetPointer, { capture: true });
-    // Minimising is not an emitted event; the sheet's class list is the reliable signal.
-    this.#observer = new MutationObserver(() => this.#syncMinimized());
+    // Minimising and switching between play and edit mode are not emitted events; the sheet's class
+    // list is the reliable signal for both (dnd5e toggles "editable", Tidy "sheet-mode-edit").
+    this.#observer = new MutationObserver(() => {
+      this.#syncMinimized();
+      refreshMode(this.element?.querySelector(".sogrom-loadout"));
+    });
     if ( this.sheet.element ) this.#observer.observe(this.sheet.element, { attributes: true, attributeFilter: ["class"] });
   }
 
@@ -155,6 +160,8 @@ export class LoadoutDock extends HandlebarsApplicationMixin(ApplicationV2) {
     bindLoadout(root, {
       actor: this.actor,
       editable: this.actor.isOwner,
+      // The dock is part of the sheet it follows, so it uses items when that sheet is in play mode.
+      mode: () => sheetMode(this.sheet),
       onPortrait: () => new PortraitConfig({ document: this.actor }).render({ force: true })
     });
     this.follow();

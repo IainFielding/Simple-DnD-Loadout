@@ -8,7 +8,8 @@
  *   1. flag      a kind pinned on the item (another module, a GM macro) — always wins
  *   2. type      what dnd5e's own data says: weapon (melee or ranged), armour, shield, ring,
  *                musical instrument, and every other tool — artisan's tools, gaming sets, kits
- *   3. name      the head noun of the name: "Cloak of Protection" → back
+ *   3. name      the head noun of the item's real name, even while it is unidentified:
+ *                "Cloak of Protection" → back
  *   4. icon      the core icon folder: `icons/equipment/feet/…` → feet
  *   5. fallback  held rods and wands to the main hand, clothing to the body, anything else worn
  *                to a trinket slot
@@ -112,11 +113,14 @@ export function classify(facts) {
     if ( facts.subtype === "ring" ) return { kind: "ring", source: "type" };
   }
 
-  const byName = kindFromName(facts.name);
+  // The real name, not the unidentified one: "Unidentified Wondrous Item" says nothing about where it
+  // goes, and an item that moved slots the moment it was identified would be a bug.
+  const name = facts.sourceName || facts.name;
+  const byName = kindFromName(name);
   if ( byName ) return { kind: byName, source: "name" };
 
   const byIcon = kindFromIcon(facts.img);
-  if ( byIcon && !((byIcon === "light") && NOT_A_LIGHT.test(facts.name)) ) return { kind: byIcon, source: "icon" };
+  if ( byIcon && !((byIcon === "light") && NOT_A_LIGHT.test(name)) ) return { kind: byIcon, source: "icon" };
 
   if ( ["rod", "wand"].includes(facts.subtype) ) return { kind: "mainHand", source: "fallback" };
   if ( facts.subtype === "clothing" ) return { kind: "body", source: "fallback" };

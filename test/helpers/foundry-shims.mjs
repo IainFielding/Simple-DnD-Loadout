@@ -47,9 +47,12 @@ export function installFoundryShims() {
     }
   };
 
+  let ids = 0;
   globalThis.foundry = {
     utils: {
       deepClone: v => structuredClone(v),
+      randomID: () => `id${String(++ids).padStart(14, "0")}`,
+      escapeHTML: v => String(v).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`),
       setProperty(obj, path, value) {
         const keys = path.split(".");
         const last = keys.pop();

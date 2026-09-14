@@ -33,7 +33,9 @@ const DYNAMIC_PREFIXES = [
   // settings.dockSide.<side>, from the choices map built over DOCK_SIDES
   "settings.dockSide",
   // settings.foreignDrops.<mode>, from the choices map built over FOREIGN_DROP_MODES
-  "settings.foreignDrops"
+  "settings.foreignDrops",
+  // gear.<key>, from data/gear.mjs's warning, stat and counter keys, dressed in loadout/context.mjs
+  "gear"
 ];
 
 /** Every file we scan for key references. */

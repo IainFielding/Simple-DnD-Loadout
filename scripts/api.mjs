@@ -11,8 +11,8 @@ import { SLOT_KINDS } from "./data/slots.mjs";
 import { classify } from "./data/classify.mjs";
 import { itemFacts } from "./data/item-facts.mjs";
 import { suggestSlot } from "./data/layout.mjs";
-import { readLayout } from "./loadout/context.mjs";
-import { equipToSlot, unequipSlot } from "./loadout/actions.mjs";
+import { readLayout, readSets } from "./loadout/context.mjs";
+import { applySet, deleteSet, equipToSlot, saveSet, unequipItem, unequipSlot } from "./loadout/actions.mjs";
 import { LoadoutDock, canDock } from "./sheet/dock.mjs";
 import { showTab } from "./sheet/tab.mjs";
 
@@ -66,20 +66,50 @@ export function createApi() {
     },
 
     /**
-     * Take an item off, by slot key or by the item itself.
+     * Take an item off, by slot key or by the item itself. An item given directly may be in a slot or
+     * under Also Worn.
      * @param {Actor} actor
      * @param {string|Item} slotOrItem
      * @returns {Promise<boolean>}
      */
     async unequip(actor, slotOrItem) {
-      let key = typeof slotOrItem === "string" ? slotOrItem : null;
-      if ( !key ) {
-        const { layout } = readLayout(actor);
-        key = layout.cells.find(c => c.item?.id === slotOrItem?.id)?.key ?? null;
-      }
-      if ( !key ) return false;
-      return unequipSlot(actor, key, { notify: false });
+      if ( typeof slotOrItem === "string" ) return unequipSlot(actor, slotOrItem, { notify: false });
+      if ( !slotOrItem ) return false;
+      return unequipItem(actor, slotOrItem, { notify: false });
     },
+
+    /**
+     * An actor's saved sets.
+     * @param {Actor} actor
+     * @returns {{id: string, name: string, slots: Record<string, string>, alsoWorn: string[]}[]}
+     */
+    sets: actor => readSets(actor).map(({ id, name, slots, alsoWorn }) => ({ id, name, slots: { ...slots }, alsoWorn: [...alsoWorn] })),
+
+    /**
+     * Save what an actor wears now as a named set, replacing any set with that name.
+     * @param {Actor} actor
+     * @param {string} name
+     * @returns {Promise<string|null>}  The set's id, or null when it could not be saved.
+     */
+    async saveSet(actor, name) {
+      return (await saveSet(actor, name, { notify: false }))?.id ?? null;
+    },
+
+    /**
+     * Put a saved set on, following the `preApplySet` veto.
+     * @param {Actor} actor
+     * @param {string} idOrName
+     * @returns {Promise<boolean>}  Whether the loadout changed.
+     */
+    applySet: (actor, idOrName) => applySet(actor, idOrName, { notify: false }),
+
+    /**
+     * Delete a saved set.
+     * @param {Actor} actor
+     * @param {string} idOrName
+     * @returns {Promise<boolean>}
+     */
+    deleteSet: (actor, idOrName) => deleteSet(actor, idOrName, { notify: false }),
 
     /**
      * Open the docked loadout beside an actor's sheet, opening the sheet first if needed.

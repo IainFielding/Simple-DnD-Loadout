@@ -10,7 +10,8 @@ Your character's portrait fills the frame, with a slot for every place gear goes
 body, wrists, hands, waist, feet, rings, both hands, a ranged main and off hand, and a bar holding a
 light source, a musical instrument, a set of tools and your trinkets. Drag armour, weapons, tools and wondrous
 items onto it, straight from the inventory. It sits in its own **Loadout** tab on the
-character sheet, or in a window docked beside the sheet that follows it around.
+character sheet (the D&D 5e sheet or Tidy 5e's), or in a window docked beside the sheet that follows
+it around.
 
 ## Requirements
 
@@ -48,17 +49,34 @@ character sheet, or in a window docked beside the sheet that follows it around.
     up and the rest fade.
   - Drag between slots to move or swap.
   - Click an empty slot to pick from what you're carrying, with search.
-  - Right-click a slot to view, use, attune or unequip the item.
+  - Click a worn item to use it while the sheet is in play mode, or to open it in edit mode, just like
+    the sheet's own inventory. The docked loadout follows the mode of the sheet it's docked to.
+  - Right-click a slot to view, use, attune, swap or unequip the item, in either mode.
   - Everything works from the keyboard too. Press **Delete** on a slot to take its item off.
 - **Attunement at a glance.** A sun badge marks attuned items. A hollow badge and a dimmed picture
   mark items that need attunement to work. Pips under the loadout count your attunements against your
   limit.
+- **Saved sets.** Dress for battle and save it as "Battle", dress for court and save that too, then
+  switch between them with one click from the button under the loadout. A set puts its items back
+  where you had them and takes everything else off. If you've sold or lost something since, the set
+  goes on without it and tells you what's missing.
+- **Know before you wear it.** An amber mark warns about armour or a weapon your character isn't
+  proficient with, and armour that needs more Strength than they have. Hover the item to read why.
+  It's only a warning: the system lets you wear it, and so does the loadout.
+- **Choose with the numbers.** The item picker shows each item's armour class or damage, versatile
+  damage included, and how much its AC beats or falls short of what you're wearing now. Wands and
+  other limited-use items show their charges on the slot, and stacks such as javelins show how many
+  you carry.
+- **No spoilers.** An unidentified item doesn't show a player its rarity, attunement or magic bonus,
+  just as the character sheet hides them. It still goes in the right slot, and doesn't move when it's
+  identified.
 - **Armour class and load.** Your AC and how much you're carrying sit under the loadout, and the load
   bar changes colour at the system's encumbrance thresholds.
 - **Nothing gets lost.** If you wear more than fits, say a third ring, the extra is listed under
   **Also Worn** rather than hidden. It stays equipped.
 - **Your portrait, framed your way.** Use a different picture for the loadout than the sheet's (a
-  full-body shot works best), and choose how it fills the frame.
+  full-body shot works best), and choose how it fills the frame. The portrait button appears when the
+  sheet is in edit mode.
 - **Rarity colours.** Each item's frame is coloured by its rarity.
 
 ## Running alongside Ember
@@ -77,7 +95,7 @@ These are under **Configure Settings → Module Settings**.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Loadout Tab | On | Adds the tab to the D&D 5e character sheet. Changing it reloads the world. |
+| Loadout Tab | On | Adds the tab to the D&D 5e character sheet, and to Tidy 5e's when Tidy is active. Changing it reloads the world. |
 | Docked Loadout Button | On | Adds a **Loadout** button to character sheet headers that opens the docked window. |
 | Dock Side | Left | *Per player.* Which side of the sheet the dock prefers. If there isn't room, it uses the other side. |
 | Open Docked Loadout With Sheets | Off | *Per player.* Opens the dock whenever a character sheet opens. |
@@ -93,14 +111,14 @@ your own character if no token is selected. You can change it under **Configure 
 | Module | Works together? | What happens |
 | --- | --- | --- |
 | [Ember](https://foundryvtt.com/packages/ember) | Yes, automatic | Ember skin, and stays out of Ember's character builder. See [Running alongside Ember](#running-alongside-ember). |
-| [Tidy 5e Sheet](https://foundryvtt.com/packages/tidy5e-sheet) | Yes, docked | Tested with Tidy 5e 14.1.0. The Loadout button appears in Tidy's sheet header, and the docked loadout sits beside Tidy's sheet and follows it. The tab is added only to the D&D 5e system's own sheet. |
+| [Tidy 5e Sheet](https://foundryvtt.com/packages/tidy5e-sheet) | Yes, tab and docked | Tested with Tidy 5e 14.1.0. Tidy's character sheet gets its own **Loadout** tab, added through Tidy's tab API, so you can hide or reorder it in Tidy's tab settings like any other tab. The Loadout button also appears in Tidy's sheet header, and the docked loadout sits beside Tidy's sheet and follows it. |
 | Other character sheets | Docked loadout | The docked loadout is built to work beside any character sheet made the standard Foundry way. Only Tidy 5e has been tested. |
 | Content modules (Player's Handbook, DMG, homebrew) | Yes | Anything using the standard D&D 5e item types can be worn or carried. Unusually named homebrew goes to a sensible slot, and in the default lenient mode can be moved wherever you like. |
 | [Simple D&D Character Creator](https://foundryvtt.com/packages/sogrom-dnd5e-character-creator), [Simple D&D Magic Shop](https://foundryvtt.com/packages/sogrom-simple-dnd5e-magic-shop) | Yes | Same look, same Ember skin. |
 
 ## For module developers
 
-The module has a small API and four hooks.
+The module has a small API and six hooks.
 
 ```js
 const api = game.modules.get("sogrom-simple-dnd5e-loadout").api;
@@ -110,6 +128,8 @@ await api.equip(actor, item);           // into its natural slot
 await api.equip(actor, item, "ring-2"); // or a named one
 await api.unequip(actor, item);
 api.layout(actor);                      // what the loadout shows right now
+await api.saveSet(actor, "Battle");     // save what's worn now
+await api.applySet(actor, "Battle");    // and put it back on later
 
 // Refuse an equip
 Hooks.on(api.HOOKS.preEquip, ({ actor, item, slot }) => slot !== "offHand" || !item.getFlag("my-module", "cursed"));

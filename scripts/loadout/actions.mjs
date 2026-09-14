@@ -1,8 +1,9 @@
 /**
  * The only code that writes to the world.
  *
- * Every change the loadout makes goes through {@link applyPlan}: a plan from `data/layout.mjs` is
- * checked against permissions and the `preEquip` hook, then committed in at most two writes.
+ * Every change to what is worn goes through {@link commit}: a plan from `data/layout.mjs` or
+ * `data/sets.mjs` is checked against permissions and the `preEquip` or `preApplySet` hook, then
+ * committed in at most two writes. Saved sets themselves are one actor flag, also written here.
  * Callers — the controller's drag/click handlers, the public API — never touch documents directly,
  * which keeps "who may do what" in one place.
  */
@@ -12,7 +13,8 @@ import {
 } from "../config.mjs";
 import { itemFacts } from "../data/item-facts.mjs";
 import { planPlace, planRemove } from "../data/layout.mjs";
-import { readLayout, slotLabel } from "./context.mjs";
+import { MAX_SETS, captureSet, cleanSetName, findSet, planApplySet, upsertSet } from "../data/sets.mjs";
+import { readLayout, readSets, slotLabel } from "./context.mjs";
 
 /** Show a refusal to the user. `data` fills the reason's placeholders. */
 export function notifyRefusal(reason, data = {}) {
@@ -59,6 +61,99 @@ export async function unequipSlot(actor, key, { notify = true } = {}) {
   const plan = planRemove(layout, key);
   if ( plan.error ) return refuse(plan.error, {}, notify);
   await commit(actor, plan);
+  return true;
+}
+
+/**
+ * Take an item off, wherever the loadout shows it: its slot, or Also Worn.
+ * @param {Actor} actor
+ * @param {Item} item
+ * @param {object} [options]
+ * @param {boolean} [options.notify=true]
+ * @returns {Promise<boolean>}
+ */
+export async function unequipItem(actor, item, { notify = true } = {}) {
+  if ( !actor?.isOwner ) return refuse("notOwner", { actor: actor?.name ?? "" }, notify);
+  if ( item?.parent !== actor ) return refuse("foreign", { actor: actor.name }, notify);
+  const { layout } = readLayout(actor);
+  const cell = layout.cells.find(c => c.item?.id === item.id);
+  if ( cell ) return unequipSlot(actor, cell.key, { notify });
+  if ( !layout.unslotted.some(i => i.id === item.id) ) return refuse("emptySlot", {}, notify);
+  await item.update({ "system.equipped": false });
+  fireHook(HOOKS.unequipped, { actor, item, slot: null });
+  return true;
+}
+
+/* -------------------------------------------- */
+/*  Saved sets                                  */
+/* -------------------------------------------- */
+
+/**
+ * Save what the character wears now as a named set, replacing a set with the same name.
+ * @param {Actor} actor
+ * @param {string} name
+ * @param {object} [options]
+ * @param {boolean} [options.notify=true]
+ * @returns {Promise<import("../data/sets.mjs").SavedSet|null>}  The saved set.
+ */
+export async function saveSet(actor, name, { notify = true } = {}) {
+  if ( !actor?.isOwner ) return refuse("notOwner", { actor: actor?.name ?? "" }, notify) || null;
+  const { layout } = readLayout(actor);
+  const set = captureSet(layout, { id: foundry.utils.randomID(), name: cleanSetName(name) });
+  const result = upsertSet(readSets(actor), set);
+  if ( result.error ) return refuse(result.error, { max: MAX_SETS }, notify) || null;
+  await actor.update({ [`flags.${MODULE_ID}.${FLAGS.sets}`]: result.sets });
+  if ( notify ) {
+    const data = { set: result.set.name };
+    ui.notifications?.info(result.replaced ? t("sets.updated", data) : t("sets.saved", data));
+  }
+  return result.set;
+}
+
+/**
+ * Forget a saved set.
+ * @param {Actor} actor
+ * @param {string} idOrName
+ * @returns {Promise<boolean>}
+ */
+export async function deleteSet(actor, idOrName, { notify = true } = {}) {
+  if ( !actor?.isOwner ) return refuse("notOwner", { actor: actor?.name ?? "" }, notify);
+  const sets = readSets(actor);
+  const set = findSet(sets, idOrName);
+  if ( !set ) return refuse("setUnknown", {}, notify);
+  await actor.update({ [`flags.${MODULE_ID}.${FLAGS.sets}`]: sets.filter(s => s !== set) });
+  return true;
+}
+
+/**
+ * Put a saved set back on: its items in their saved slots, everything else in a slot off.
+ * @param {Actor} actor
+ * @param {string} idOrName
+ * @param {object} [options]
+ * @param {boolean} [options.notify=true]  Show refusals, and which saved items are no longer carried.
+ * @returns {Promise<boolean>}  Whether the loadout changed.
+ */
+export async function applySet(actor, idOrName, { notify = true } = {}) {
+  if ( !actor?.isOwner ) return refuse("notOwner", { actor: actor?.name ?? "" }, notify);
+  const set = findSet(readSets(actor), idOrName);
+  if ( !set ) return refuse("setUnknown", {}, notify);
+  const { layout, items } = readLayout(actor);
+  const plan = planApplySet(layout, items, set);
+  if ( plan.unchanged ) return false;
+  if ( !callCancellable(HOOKS.preApplySet, { actor, set }) ) return refuse("vetoed", {}, notify);
+  // A set is many equips at once, and a module refusing one of them through `preEquip` (a cursed
+  // item, a slot it reserves) must not be bypassed by saving the loadout first.
+  for ( const { item, key } of plan.placed ) {
+    if ( !callCancellable(HOOKS.preEquip, { actor, item: actor.items.get(item.id) ?? null, slot: key }) ) {
+      return refuse("vetoed", {}, notify);
+    }
+  }
+  await commit(actor, plan);
+  if ( notify && plan.missing.length ) {
+    const list = game.i18n.getListFormatter?.({ type: "conjunction" })?.format(plan.missing) ?? plan.missing.join(", ");
+    ui.notifications?.warn(t("sets.missing", { set: set.name, items: list }));
+  }
+  fireHook(HOOKS.setApplied, { actor, set, missing: plan.missing });
   return true;
 }
 

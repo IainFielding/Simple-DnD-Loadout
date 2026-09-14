@@ -27,7 +27,7 @@
 
      ui/elements/codex-background-dark.webp      the loadout's ground and the dock's window */
 
-.sogrom-loadout.sogrom-ember {
+.sogrom-loadout:not(#lo-host).sogrom-ember {
   --lo-bg: rgba(11, 10, 19, 0.50);
   --lo-sunk: rgba(7, 6, 13, 0.70);
   --lo-panel: rgba(23, 19, 30, 0.72);
@@ -75,42 +75,42 @@
 }
 
 /* The stage keeps a faint warm glow rising from the bottom, as Ember's fullscreen windows do. */
-.sogrom-loadout.sogrom-ember .lo-stage {
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-stage {
   background:
     linear-gradient(to bottom, transparent 70%, rgba(178, 50, 53, 0.18) 100%),
     rgba(7, 6, 13, 0.55);
 }
 
 /* Pirate Scroll is a display face with no bold weights; heavy tracking fights its hand-drawn look. */
-.sogrom-loadout.sogrom-ember :is(h2, h3),
-.sogrom-loadout.sogrom-ember .lo-stat-value {
+.sogrom-loadout:not(#lo-host).sogrom-ember :is(h2, h3),
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-stat-value {
   font-weight: 400;
   letter-spacing: 0.02em;
 }
-.sogrom-loadout.sogrom-ember .lo-name { font-size: clamp(20px, 6.5cqi, 28px); }
-.sogrom-loadout.sogrom-ember .lo-slot-label { font-family: var(--lo-font-body); text-transform: none; letter-spacing: 0; font-size: 12px; }
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-name { font-size: clamp(20px, 6.5cqi, 28px); }
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-slot-label { font-family: var(--lo-font-body); text-transform: none; letter-spacing: 0; font-size: 12px; }
 
 /* Slots take a small corner rather than the token's 6px at trinket size, where the rounding would
    crop the icon and thin the rarity frame at the turn. */
-.sogrom-loadout.sogrom-ember :is(.lo-trinkets, .lo-camp) .lo-slot { border-radius: 4px; }
-.sogrom-loadout.sogrom-ember .lo-camp-title { font-family: var(--lo-font-body); letter-spacing: 0.04em; font-size: 11px; }
-.sogrom-loadout.sogrom-ember .lo-slot-img { border-radius: inherit; }
+.sogrom-loadout:not(#lo-host).sogrom-ember :is(.lo-trinkets, .lo-camp) .lo-slot { border-radius: 4px; }
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-camp-title { font-family: var(--lo-font-body); letter-spacing: 0.04em; font-size: 11px; }
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-slot-img { border-radius: inherit; }
 
 /* Attunement pips are parchment rings rather than brass diamonds, matching Ember's round crests.
    Ember's own BlockActorRing art was tried here and dropped: at pip size its band is a pixel wide
    and the pips read as specks. */
-.sogrom-loadout.sogrom-ember .lo-pip {
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-pip {
   width: 11px;
   height: 11px;
   rotate: none;
   border-radius: 50%;
   border: 1.5px solid var(--lo-settled);
 }
-.sogrom-loadout.sogrom-ember .lo-pip.is-filled {
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-pip.is-filled {
   background: var(--lo-settled-bright);
   box-shadow: 0 0 6px var(--lo-settled-glow);
 }
-.sogrom-loadout.sogrom-ember .lo-pip.is-over { border-color: var(--lo-danger); background: var(--lo-danger); }
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-pip.is-over { border-color: var(--lo-danger); background: var(--lo-danger); }
 
-.sogrom-loadout.sogrom-ember .lo-picker { border-top-color: var(--lo-settled); }
-.sogrom-loadout.sogrom-ember :is(.band-heavy, .band-over) .lo-bar-fill { background: linear-gradient(90deg, #c93f4b, #e04e4e); }
+.sogrom-loadout:not(#lo-host).sogrom-ember .lo-picker { border-top-color: var(--lo-settled); }
+.sogrom-loadout:not(#lo-host).sogrom-ember :is(.band-heavy, .band-over) .lo-bar-fill { background: linear-gradient(90deg, #c93f4b, #e04e4e); }

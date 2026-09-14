@@ -1,0 +1,5 @@
+{{!--
+  The Loadout tab body on Tidy 5e Sheet's character sheet. Tidy renders this into its own tab
+  container from scripts/sheet/tidy-tab.mjs, whose getData supplies `loadout`.
+--}}
+{{#with loadout}}{{> sogrom-lo-loadout}}{{/with}}

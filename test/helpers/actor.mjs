@@ -38,9 +38,13 @@ function applyItemChanges(item, changes) {
  * @param {object} [options.slots]    Stored assignments.
  * @param {boolean} [options.isOwner]
  * @param {object} [options.attributes]
+ * @param {object} [options.abilities]
+ * @param {object[]} [options.sets]   Stored saved sets.
  */
-export function fakeActor({ items = [], slots = {}, isOwner = true, attributes = {}, portrait } = {}) {
-  const flags = { [MODULE_ID]: { slots: structuredClone(slots), ...(portrait ? { portrait } : {}) } };
+export function fakeActor({ items = [], slots = {}, isOwner = true, attributes = {}, abilities = {}, portrait, sets } = {}) {
+  const flags = { [MODULE_ID]: {
+    slots: structuredClone(slots), ...(portrait ? { portrait } : {}), ...(sets ? { sets: structuredClone(sets) } : {})
+  } };
   const actor = {
     id: "hero",
     uuid: "Actor.hero",
@@ -56,6 +60,11 @@ export function fakeActor({ items = [], slots = {}, isOwner = true, attributes =
         attunement: { value: 1, max: 3 },
         encumbrance: { value: 60, max: 300, pct: 20, thresholds: { encumbered: 100, heavilyEncumbered: 200 } },
         ...attributes
+      },
+      abilities: {
+        str: { value: 10, mod: 0 },
+        dex: { value: 10, mod: 0 },
+        ...abilities
       }
     },
     getFlag(scope, key) { return flags[scope]?.[key]; },
@@ -64,8 +73,8 @@ export function fakeActor({ items = [], slots = {}, isOwner = true, attributes =
       for ( const [path, value] of Object.entries(changes) ) {
         const [, scope, key] = path.split(".");
         flags[scope] ??= {};
-        // Foundry merges object updates into existing flags; null values are kept.
-        flags[scope][key] = { ...(flags[scope][key] ?? {}), ...value };
+        // Foundry merges object updates into existing flags, keeping null values; an array replaces.
+        flags[scope][key] = Array.isArray(value) ? structuredClone(value) : { ...(flags[scope][key] ?? {}), ...value };
       }
     },
     async updateEmbeddedDocuments(type, updates) {
