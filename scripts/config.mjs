@@ -40,6 +40,7 @@ export const SETTINGS = Object.freeze({
   autoDock: "autoDock",
   strictSlots: "strictSlots",
   foreignDrops: "foreignDrops",
+  chatCards: "chatCards",
   slotLayout: "slotLayout",
   debug: "debugLogging"
 });
@@ -50,6 +51,12 @@ export const DOCK_SIDES = Object.freeze(["left", "right"]);
 /** Who may drop an item the actor does not already own (from a compendium or the sidebar). */
 export const FOREIGN_DROP_MODES = Object.freeze(["gm", "owner", "none"]);
 
+/**
+ * Who sees the chat card posted when a loadout changes. `public` and `gm` are Foundry's own message
+ * modes, passed straight to `ChatMessage.applyMode`.
+ */
+export const CHAT_CARD_MODES = Object.freeze(["none", "public", "gm"]);
+
 export const DEFAULTS = Object.freeze({
   [SETTINGS.sheetTab]: true,
   [SETTINGS.dockButton]: true,
@@ -57,6 +64,7 @@ export const DEFAULTS = Object.freeze({
   [SETTINGS.autoDock]: false,
   [SETTINGS.strictSlots]: false,
   [SETTINGS.foreignDrops]: "gm",
+  [SETTINGS.chatCards]: "none",
   [SETTINGS.slotLayout]: Object.freeze({ rings: 2, trinkets: 4, ranged: 2, camp: false, disabled: Object.freeze([]) }),
   [SETTINGS.debug]: false
 });

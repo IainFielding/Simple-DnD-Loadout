@@ -3,7 +3,8 @@
  *
  * Every change to what is worn goes through {@link commit}: a plan from `data/layout.mjs` or
  * `data/sets.mjs` is checked against permissions and the `preEquip` or `preApplySet` hook, then
- * committed in at most two writes. Saved sets themselves are one actor flag, also written here.
+ * committed in at most two writes, then — when the GM has asked for them — told in a chat card
+ * (`chat.mjs`). Saved sets themselves are one actor flag, also written here.
  * Callers — the controller's drag/click handlers, the public API — never touch documents directly,
  * which keeps "who may do what" in one place.
  */
@@ -14,6 +15,7 @@ import {
 import { itemFacts } from "../data/item-facts.mjs";
 import { planPlace, planRemove } from "../data/layout.mjs";
 import { MAX_SETS, captureSet, cleanSetName, findSet, planApplySet, relinkSet, upsertSet } from "../data/sets.mjs";
+import { postChangeCard } from "./chat.mjs";
 import { readLayout, readSets, slotLabel } from "./context.mjs";
 
 /** Show a refusal to the user. `data` fills the reason's placeholders. */
@@ -43,7 +45,7 @@ export async function equipToSlot(actor, item, targetKey, { sourceKey = null, no
   if ( !callCancellable(HOOKS.preEquip, { actor, item, slot: targetKey }) ) {
     return refuse("vetoed", {}, notify);
   }
-  await commit(actor, plan);
+  await commit(actor, plan, { before: { layout, counts } });
   return true;
 }
 
@@ -57,10 +59,10 @@ export async function equipToSlot(actor, item, targetKey, { sourceKey = null, no
  */
 export async function unequipSlot(actor, key, { notify = true } = {}) {
   if ( !actor?.isOwner ) return refuse("notOwner", { actor: actor?.name ?? "" }, notify);
-  const { layout } = readLayout(actor);
+  const { layout, counts } = readLayout(actor);
   const plan = planRemove(layout, key);
   if ( plan.error ) return refuse(plan.error, {}, notify);
-  await commit(actor, plan);
+  await commit(actor, plan, { before: { layout, counts } });
   return true;
 }
 
@@ -75,12 +77,14 @@ export async function unequipSlot(actor, key, { notify = true } = {}) {
 export async function unequipItem(actor, item, { notify = true } = {}) {
   if ( !actor?.isOwner ) return refuse("notOwner", { actor: actor?.name ?? "" }, notify);
   if ( item?.parent !== actor ) return refuse("foreign", { actor: actor.name }, notify);
-  const { layout } = readLayout(actor);
+  const { layout, counts } = readLayout(actor);
   const cell = layout.cells.find(c => c.item?.id === item.id);
   if ( cell ) return unequipSlot(actor, cell.key, { notify });
-  if ( !layout.unslotted.some(i => i.id === item.id) ) return refuse("emptySlot", {}, notify);
+  const worn = layout.unslotted.find(i => i.id === item.id);
+  if ( !worn ) return refuse("emptySlot", {}, notify);
   await item.update({ "system.equipped": false });
   fireHook(HOOKS.unequipped, { actor, item, slot: null });
+  await postChangeCard(actor, { layout, counts }, { placed: [], removed: [{ item: worn, key: null }] });
   return true;
 }
 
@@ -138,7 +142,7 @@ export async function applySet(actor, idOrName, { notify = true } = {}) {
   const sets = readSets(actor);
   const set = findSet(sets, idOrName);
   if ( !set ) return refuse("setUnknown", {}, notify);
-  const { layout, items } = readLayout(actor);
+  const { layout, items, counts } = readLayout(actor);
   const plan = planApplySet(layout, items, set);
   // Items found again under new ids are written back into the set, so next time it needs no search
   // and the footer recognises the loadout as this set.
@@ -157,7 +161,7 @@ export async function applySet(actor, idOrName, { notify = true } = {}) {
       return refuse("vetoed", {}, notify);
     }
   }
-  await commit(actor, plan, relinkedSets);
+  await commit(actor, plan, { actorChanges: relinkedSets, before: { layout, counts }, set });
   if ( notify && plan.missing.length ) {
     const list = game.i18n.getListFormatter?.({ type: "conjunction" })?.format(plan.missing) ?? plan.missing.join(", ");
     ui.notifications?.warn(t("sets.missing", { set: set.name, items: list }));
@@ -260,11 +264,17 @@ function refuse(reason, data, notify) {
  * item update already shows items in their new slots — writing items first would flash them into
  * auto-placed positions for a frame. When no item changes (a pure move between slots) the flag
  * write is the only write, so it renders.
+ *
+ * The chat card goes last, once every hook has fired, and is awaited so a caller's `await` covers it;
+ * it never throws.
  * @param {Actor} actor
  * @param {import("../data/layout.mjs").Plan} plan
- * @param {object|null} [actorChanges]  More actor changes to make in the same first write.
+ * @param {object} options
+ * @param {{layout: object, counts: object}} options.before  The loadout the plan was made from.
+ * @param {object|null} [options.actorChanges]  More actor changes to make in the same first write.
+ * @param {object|null} [options.set]           The saved set being put on, for the chat card.
  */
-async function commit(actor, plan, actorChanges = null) {
+async function commit(actor, plan, { before, actorChanges = null, set = null }) {
   const updates = [
     ...plan.equip.map(_id => ({ _id, "system.equipped": true })),
     ...plan.unequip.map(_id => ({ _id, "system.equipped": false }))
@@ -282,4 +292,5 @@ async function commit(actor, plan, actorChanges = null) {
   for ( const { item, key } of plan.placed ) {
     fireHook(HOOKS.equipped, { actor, item: actor.items.get(item.id) ?? null, slot: key });
   }
+  await postChangeCard(actor, before, plan, { set });
 }

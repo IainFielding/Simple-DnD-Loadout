@@ -117,7 +117,7 @@ export async function all() {
   const results = {};
   const suites = {
     tabSuite, equipSuite, kitSuite, campSuite, barSuite, domSuite, clickSuite, gearSuite, setsSuite, dockSuite,
-    otherSheetSuite, apiSuite, settingsSuite,
+    otherSheetSuite, apiSuite, settingsSuite, chatSuite,
     configSuite
   };
   for ( const [name, suite] of Object.entries(suites) ) {
@@ -943,6 +943,69 @@ async function settingsSuite(report, mod, hero) {
   }
   const stranger = game.actors.getName(STRANGER);
   report.check("the stranger exists for the player suite", !!stranger);
+}
+
+/** The GM's chat card setting: real ChatMessage documents, rendered by Foundry's own chat code. */
+async function chatSuite(report, mod, hero) {
+  const { applySet, equipToSlot, saveSet, unequipSlot } = mod.actions;
+  const before = game.settings.get(MODULE, "chatCards");
+  const posted = [];
+  const hook = Hooks.on("createChatMessage", message => {
+    if ( message.speaker?.actor === hero.id ) posted.push(message);
+  });
+  /** Run a change and return the cards it posted. */
+  const cardsFrom = async fn => {
+    posted.length = 0;
+    await fn();
+    return [...posted];
+  };
+  const linesOf = async message => {
+    const html = await message.renderHTML();
+    return [...html.querySelectorAll(".sogrom-lo-chat .lo-chat-change")].map(li => ({
+      change: li.dataset.change, text: li.querySelector(".lo-chat-text")?.textContent.trim(), img: !!li.querySelector("img")
+    }));
+  };
+  try {
+    await game.settings.set(MODULE, "chatCards", "none");
+    let cards = await cardsFrom(() => equipToSlot(hero, gear(hero, "longsword"), "mainHand"));
+    report.equal("off: an equip posts nothing", cards.length, 0);
+
+    await game.settings.set(MODULE, "chatCards", "public");
+    cards = await cardsFrom(() => equipToSlot(hero, gear(hero, "shield"), "offHand"));
+    report.equal("public: an equip posts one card", cards.length, 1);
+    report.equal("…visible to everyone", cards[0]?.whisper ?? null, []);
+    const [equipLine] = cards[0] ? await linesOf(cards[0]) : [];
+    report.equal("…whose line is an equip", equipLine?.change, "equip");
+    report.check("…naming the item and the slot", /Shield/.test(equipLine?.text) && /Off Hand/.test(equipLine?.text), equipLine?.text);
+    report.check("…with the item's picture", equipLine?.img);
+
+    const [ringA, ringB] = ["ringProtection", "ringWarmth"].map(k => gear(hero, k));
+    await equipToSlot(hero, ringA, "ring-1");
+    await equipToSlot(hero, ringB, "ring-2");
+    cards = await cardsFrom(() => equipToSlot(hero, ringA, "ring-2", { sourceKey: "ring-1" }));
+    const swapLines = cards[0] ? await linesOf(cards[0]) : [];
+    report.equal("a swap is one card with one swap line", swapLines.map(l => l.change), ["swap"]);
+
+    cards = await cardsFrom(() => equipToSlot(hero, gear(hero, "greatsword"), "mainHand"));
+    const gripLines = cards[0] ? await linesOf(cards[0]) : [];
+    report.equal("a greatsword reports the replaced sword and the freed off hand", gripLines.map(l => l.change), ["replace", "unequip"]);
+
+    const battle = await saveSet(hero, "Battle", { notify: false });
+    await unequipSlot(hero, "mainHand");
+    cards = await cardsFrom(() => applySet(hero, battle.id, { notify: false }));
+    report.equal("putting on a set posts one card", cards.length, 1);
+    report.check("…flavoured with the set's name", /Battle/.test(cards[0]?.flavor ?? ""), cards[0]?.flavor);
+
+    await game.settings.set(MODULE, "chatCards", "gm");
+    cards = await cardsFrom(() => unequipSlot(hero, "ring-1"));
+    const gmIds = game.users.filter(u => u.isGM).map(u => u.id).sort();
+    report.equal("gm: the card is whispered to the GMs", [...(cards[0]?.whisper ?? [])].sort(), gmIds);
+  } finally {
+    Hooks.off("createChatMessage", hook);
+    await game.settings.set(MODULE, "chatCards", before);
+    const ours = game.messages.filter(m => (m.speaker?.actor === hero.id) && m.content.includes("sogrom-lo-chat"));
+    if ( ours.length ) await ChatMessage.deleteDocuments(ours.map(m => m.id));
+  }
 }
 
 /** The two small windows: they render, and what they save is what the loadout then reads. */

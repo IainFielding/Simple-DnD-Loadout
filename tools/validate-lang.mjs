@@ -34,6 +34,10 @@ const DYNAMIC_PREFIXES = [
   "settings.dockSide",
   // settings.foreignDrops.<mode>, from the choices map built over FOREIGN_DROP_MODES
   "settings.foreignDrops",
+  // settings.chatCards.<mode>, from the choices map built over CHAT_CARD_MODES
+  "settings.chatCards",
+  // chat.change.<action>, from loadout/chat.mjs#changeLines over data/changes.mjs's actions
+  "chat.change",
   // gear.<key>, from data/gear.mjs's warning, stat and counter keys, dressed in loadout/context.mjs
   "gear"
 ];

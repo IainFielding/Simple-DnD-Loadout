@@ -9,7 +9,7 @@
  */
 
 import {
-  DEFAULTS, DOCK_SIDES, FOREIGN_DROP_MODES, HOOKS, MODULE_ID, SETTINGS, fireHook, log, setting, t, tpl
+  CHAT_CARD_MODES, DEFAULTS, DOCK_SIDES, FOREIGN_DROP_MODES, HOOKS, MODULE_ID, SETTINGS, fireHook, log, setting, t, tpl
 } from "./config.mjs";
 import { registerApi } from "./api.mjs";
 import { SlotConfigApp } from "./app/slot-config.mjs";
@@ -29,13 +29,15 @@ Hooks.once("init", () => {
     return;
   }
 
-  // The loadout and its slot are partials, shared by the sheet tab and the dock; the picker and the
-  // saved-sets drawer are rendered on demand but preloaded so the first click does not wait on a fetch.
+  // The loadout and its slot are partials, shared by the sheet tab and the dock; the picker, the
+  // saved-sets drawer and the chat card are rendered on demand but preloaded so the first use does not
+  // wait on a fetch.
   foundry.applications.handlebars.loadTemplates({
     "sogrom-lo-loadout": tpl("loadout.hbs"),
     "sogrom-lo-slot": tpl("parts/slot.hbs"),
     "sogrom-lo-picker": tpl("parts/picker.hbs"),
-    "sogrom-lo-sets": tpl("parts/sets.hbs")
+    "sogrom-lo-sets": tpl("parts/sets.hbs"),
+    "sogrom-lo-chat": tpl("chat-card.hbs")
   });
 
   if ( setting(SETTINGS.sheetTab) ) {
@@ -115,6 +117,12 @@ function registerSettings() {
     hint: t("settings.foreignDrops.hint"),
     scope: "world", config: true, type: String, default: DEFAULTS[SETTINGS.foreignDrops],
     choices: Object.fromEntries(FOREIGN_DROP_MODES.map(mode => [mode, t(`settings.foreignDrops.${mode}`)]))
+  });
+  game.settings.register(MODULE_ID, SETTINGS.chatCards, {
+    name: t("settings.chatCards.name"),
+    hint: t("settings.chatCards.hint"),
+    scope: "world", config: true, type: String, default: DEFAULTS[SETTINGS.chatCards],
+    choices: Object.fromEntries(CHAT_CARD_MODES.map(mode => [mode, t(`settings.chatCards.${mode}`)]))
   });
   game.settings.register(MODULE_ID, SETTINGS.slotLayout, {
     scope: "world", config: false, type: Object,

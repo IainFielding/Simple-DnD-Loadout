@@ -24,6 +24,8 @@ This harness covers what those unit tests can't:
   and an unidentified item is placed by its real name while a player sees no rarity or attunement.
 - Saved sets save, switch and delete through the real drawer inside the sheet's form, without
   submitting the sheet or moving a slot.
+- With the GM's chat card setting on, a change posts a real chat message that Foundry renders, public
+  or whispered to the GMs.
 - The Loadout tab works on Tidy 5e's sheet (added through Tidy's API), and the docked loadout works beside it.
 
 The harness source is tracked in git but never shipped. `config.mjs` and the run output (`*.log`,
@@ -77,6 +79,6 @@ they use dnd5e's sheet.
 | --- | --- | --- |
 | `run.mjs`, `provision.mjs`, `lib/` | Node | Starts Foundry, joins with Playwright, prints reports |
 | `in-world/provision.mjs` | the page | Fixtures: the player, `[e2e] Loadout Hero`, `[e2e] Stranger`, and the gear |
-| `in-world/harness.mjs` | GM page | Tab, equip, kit (ranged, light, instrument, tools), camp clothes, the trinket bar, DOM, gear notes, saved sets, dock, API, settings and config-window suites |
+| `in-world/harness.mjs` | GM page | Tab, equip, kit (ranged, light, instrument, tools), camp clothes, the trinket bar, DOM, gear notes, saved sets, dock, API, settings, chat card and config-window suites |
 | `in-world/player.mjs` | player page | Permissions, and what an unidentified item hides from a player |
 | `in-world/render.mjs` | GM page | The showcase screenshot, and the Ember and Tidy suites |

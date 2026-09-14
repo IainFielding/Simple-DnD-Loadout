@@ -2,8 +2,8 @@
  * Just-enough Foundry globals for the pure logic under plain Node.
  *
  * Nothing in `scripts/data/` needs a real Foundry; `config.mjs` reaches for `game.settings`,
- * `game.i18n` and `Hooks` in its helpers, and that is all this provides. Vitest loads it through
- * `setupFiles`, before any test imports resolve. Tests override the pieces they exercise and call
+ * `game.i18n` and `Hooks` in its helpers, and the write path posts chat cards; that is all this
+ * provides. Vitest loads it through `setupFiles`, before any test imports resolve. Tests override the pieces they exercise and call
  * {@link installFoundryShims} in `beforeEach` when they have mutated one.
  */
 
@@ -47,8 +47,18 @@ export function installFoundryShims() {
     }
   };
 
+  // Chat messages are recorded, with `applyMode` reduced to the one field the module relies on.
+  globalThis.ChatMessage = {
+    created: [],
+    getSpeaker: ({ actor }) => ({ actor: actor?.id ?? null, alias: actor?.name ?? "" }),
+    applyMode: (data, mode) => ({ ...data, whisper: mode === "gm" ? ["gm-user"] : [] }),
+    async create(data) { this.created.push(data); return data; }
+  };
+
   let ids = 0;
   globalThis.foundry = {
+    // Templates render as their data, so a test can read what a card was given.
+    applications: { handlebars: { renderTemplate: async (path, data) => JSON.stringify({ path, ...data }) } },
     utils: {
       deepClone: v => structuredClone(v),
       randomID: () => `id${String(++ids).padStart(14, "0")}`,

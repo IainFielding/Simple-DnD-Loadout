@@ -110,6 +110,20 @@
       "title": "Also Worn",
       "hint": "Equipped, but no free slot fits. Free one up, or drag it onto a slot."
     },
+    "chat": {
+      "flavor": "Loadout",
+      "flavorSet": "Loadout: put on the set {set}",
+      "change": {
+        "equip": "Equipped {item} in {to}",
+        "replace": "Equipped {item} in {to}, replacing {other}",
+        "move": "Moved {item} from {from} to {to}",
+        "swap": "Swapped {item} into {to} and {other} into {from}",
+        "pack": "Packed {item} in {to}",
+        "unequip": "Unequipped {item} from {from}",
+        "unequipWorn": "Unequipped {item}",
+        "unpack": "Took {item} out of {from}"
+      }
+    },
     "notify": {
       "attuneOver": "{actor} is now attuned to {used} items (limit {max}).",
       "created": "{item} added to {actor}'s inventory."
@@ -175,6 +189,13 @@
         "gm": "Gamemaster only",
         "owner": "Anyone who owns the character",
         "none": "Nobody"
+      },
+      "chatCards": {
+        "name": "Equipment Changes in Chat",
+        "hint": "Post a chat message when someone puts an item into a loadout slot, takes one out, moves or swaps items, or puts on a saved set. Gamemaster only whispers the message to the GMs.",
+        "none": "Off",
+        "public": "Everyone",
+        "gm": "Gamemaster only"
       },
       "slotLayoutMenu": {
         "name": "Loadout Slots",

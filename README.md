@@ -104,6 +104,7 @@ These are under **Configure Settings → Module Settings**.
 | Open Docked Loadout With Sheets | Off | *Per player.* Opens the dock whenever a character sheet opens. |
 | Strict Slot Matching | Off | When off, any worn accessory fits any accessory slot, so a player can put homebrew gear wherever it makes sense. When on, boots only go on feet, cloaks only on the back, and so on. Armour, shields, weapons and rings follow the rules either way. |
 | Dropping New Items | Gamemaster only | Who may drop an item the character doesn't already carry, from a compendium or the Items sidebar, onto the loadout. It's added to the inventory and equipped. |
+| Equipment Changes in Chat | Off | Posts a chat message when someone puts an item into a slot, takes one out, moves or swaps items, or puts on a saved set. **Everyone** posts it publicly; **Gamemaster only** whispers it to the GMs. |
 | Configure Slots | 2 rings, 2 ranged, 4 trinkets, camp clothes off | How many ring slots (1–4), ranged weapon slots (0–2) and trinket slots (0–5) every loadout has, which optional slots (head, neck, back, wrists, hands, waist, feet, light source, instrument, tools) are shown, and whether the three camp clothes slots are on. |
 
 **Hotkey:** **Shift + L** opens or closes the docked loadout for your selected token's character, or

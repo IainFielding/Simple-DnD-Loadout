@@ -1,0 +1,14 @@
+{{!--
+  The chat card for a loadout change, rendered by scripts/loadout/chat.mjs#postChangeCard.
+  Each line's text is HTML built there, with item names and slot labels already escaped.
+--}}
+<div class="sogrom-lo-chat">
+  <ul class="lo-chat-changes">
+    {{#each lines}}
+    <li class="lo-chat-change" data-change="{{action}}">
+      {{#if img}}<img class="lo-chat-img" src="{{img}}" alt="" width="32" height="32">{{/if}}
+      <span class="lo-chat-text">{{{text}}}</span>
+    </li>
+    {{/each}}
+  </ul>
+</div>

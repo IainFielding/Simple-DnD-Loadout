@@ -2,8 +2,8 @@
    =====================
 
    Every rule is scoped under `.sogrom-loadout` (the loadout itself, on both surfaces), `.sogrom-lo-dock`
-   (the docked window's frame), `.sogrom-lo-tab` (the sheet tab wrapper) or `.sogrom-lo-form` (the
-   two config windows). That scoping is what keeps this sheet out of dnd5e's own sheet styling and
+   (the docked window's frame), `.sogrom-lo-tab` (the sheet tab wrapper), `.sogrom-lo-form` (the
+   two config windows) or `.sogrom-lo-chat` (the equipment-change chat card). That scoping is what keeps this sheet out of dnd5e's own sheet styling and
    the rest of Foundry, so add new selectors beneath one of those roots.
 
    The loadout root is always written `.sogrom-loadout:not(#lo-host)`. No element has that id, so the
@@ -806,6 +806,35 @@
   overflow: hidden;
 }
 .sogrom-lo-form .lo-portrait-preview img { width: 100%; height: 100%; border: 0; display: block; }
+
+/* ---------------------------------------------- Chat card
+
+   The card sits in Foundry's chat log, not in the display case, so it takes the chat's own colours
+   and fonts rather than the loadout's theme. */
+
+.sogrom-lo-chat .lo-chat-changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sogrom-lo-chat .lo-chat-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.sogrom-lo-chat .lo-chat-img {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border, #656e7b);
+  border-radius: 4px;
+  object-fit: cover;
+}
+.sogrom-lo-chat .lo-chat-text { line-height: 1.3; }
 
 /* ---------------------------------------------- Motion */
 

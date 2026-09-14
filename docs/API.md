@@ -143,6 +143,13 @@ Each hook receives a single object.
 
 A listener that throws is logged and ignored. A throwing `preEquip` listener doesn't count as a veto.
 
+## Chat cards
+
+When the GM turns on **Equipment Changes in Chat**, every change made through the API posts the same
+chat card a player's drag does: `equip`, `unequip` and `applySet` included. The card is posted by the
+client that made the change, after the hooks above have fired, and the returned promise settles once it
+is posted. A card that fails to post is logged and never fails the change.
+
 ## Stored data
 
 | Where | Shape |
