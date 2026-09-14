@@ -18,8 +18,14 @@
         "light": "Light Source",
         "instrument": "Instrument",
         "tools": "Artisan's Tools",
-        "trinket": "Trinket"
+        "trinket": "Trinket",
+        "campOutfit": "Camp Outfit",
+        "campUnderwear": "Underwear",
+        "campFootwear": "Camp Footwear"
       },
+      "barGroup": "Kit and trinkets",
+      "campGroup": "Camp",
+      "campHint": "Camp clothes are packed for downtime, not worn. An item here is unequipped, so its armour and magic don't apply.",
       "numbered": "{label} {index}",
       "empty": "{label}: empty. Click to choose an item, or drop one here.",
       "emptyReadonly": "{label}: empty",
@@ -46,6 +52,7 @@
       "attune": "Attune",
       "unattune": "End Attunement",
       "swap": "Choose Another…",
+      "unpack": "Take Out of Camp",
       "unequip": "Unequip"
     },
     "picker": {
@@ -93,9 +100,12 @@
       "intro": "Choose which slots every character's paper doll shows. Items already worn in a slot you turn off stay equipped and appear under Also Worn.",
       "rings": "Ring slots",
       "ranged": "Ranged weapon slots",
-      "rangedHint": "Bows, crossbows and slings carried ready, either side of the hands. A two-handed bow here doesn't tie up the off hand.",
+      "rangedHint": "Bows, crossbows and slings carried ready, to the right of the hands. A two-handed bow here doesn't tie up the off hand.",
       "trinkets": "Trinket slots",
-      "trinketsHint": "Catch-all slots for worn magic items with no better home: ioun stones, figurines, gems.",
+      "trinketsHint": "Up to five catch-all slots for worn magic items with no better home: ioun stones, figurines, gems. They share a bar with the light source, instrument and tools slots.",
+      "camp": "Camp clothes",
+      "campEnable": "Show camp clothes slots",
+      "campHint": "Adds a Camp group for downtime clothing: an outfit, underwear and footwear, like Baldur's Gate 3's camp slots. Camp clothes are packed, not worn: putting an item there unequips it, so its armour and magic don't apply.",
       "optional": "Optional slots",
       "save": "Save",
       "reset": "Restore Defaults"
@@ -133,7 +143,7 @@
       "slotLayoutMenu": {
         "name": "Paper Doll Slots",
         "label": "Configure Slots",
-        "hint": "How many ring, ranged weapon and trinket slots every character has, and which optional slots are shown."
+        "hint": "How many ring, ranged weapon and trinket slots every character has, which optional slots are shown, and whether camp clothes slots are on."
       },
       "debugLogging": {
         "name": "Debug Logging",

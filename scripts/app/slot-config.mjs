@@ -1,5 +1,6 @@
 /**
- * GM window: how many ring, ranged and trinket slots every doll has, and which optional slots show.
+ * GM window: how many ring, ranged and trinket slots every doll has, which optional slots show, and
+ * whether the camp clothes group is on.
  *
  * Opened from the module's settings menu. Writes the `slotLayout` world setting, whose `onChange`
  * (main.mjs) re-renders every open sheet and dock so the change is visible straight away.
@@ -46,6 +47,7 @@ export class SlotConfigApp extends HandlebarsApplicationMixin(ApplicationV2) {
       rings: layout.rings,
       trinkets: layout.trinkets,
       ranged: layout.ranged,
+      camp: layout.camp,
       maxRings: MAX_RINGS,
       maxTrinkets: MAX_TRINKETS,
       maxRanged: MAX_RANGED,

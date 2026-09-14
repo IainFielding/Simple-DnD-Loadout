@@ -34,23 +34,50 @@ async function dressHero(mod, hero) {
   await equipToSlot(hero, gear(hero, "torch"), "light", { notify: false });
   await equipToSlot(hero, gear(hero, "lute"), "instrument", { notify: false });
   await equipToSlot(hero, gear(hero, "smiths"), "tools", { notify: false });
+  // Camp clothes, switched on for the picture and restored by the caller.
+  await equipToSlot(hero, gear(hero, "travelers"), "campOutfit", { notify: false });
+  await equipToSlot(hero, gear(hero, "smallclothes"), "campUnderwear", { notify: false });
+  await equipToSlot(hero, gear(hero, "shoes"), "campFootwear", { notify: false });
   await toggleAttunement(hero, gear(hero, "cloak"));
   await toggleAttunement(hero, gear(hero, "ringProtection"));
 }
 
-/** Open the hero's sheet on the doll tab, dock beside it, for a screenshot. */
-export async function showcase() {
+/** Tidy 5e's character sheet class id, when Tidy is active. It registers under the system's scope. */
+function tidySheetId() {
+  return Object.values(CONFIG.Actor.sheetClasses.character ?? {}).find(s => /\.Tidy5e/.test(s.id))?.id ?? null;
+}
+
+/**
+ * Dress the hero and open the picture the world is about, for a screenshot:
+ * - normally, dnd5e's sheet on the Paper Doll tab with the dock beside it;
+ * - with `tidy`, Tidy 5e's sheet with the dock beside it. Tidy's sheet has no Paper Doll tab — the
+ *   tab is only added to dnd5e's own sheet — so the dock is the whole point of that picture.
+ * {@link teardown} puts the hero back on dnd5e's sheet.
+ * @param {{tidy?: boolean}} [options]
+ */
+export async function showcase({ tidy = false } = {}) {
   const mod = await load();
   const hero = game.actors.getName(HERO);
   await closeAll();
+  await game.settings.set("sogrom-simple-dnd5e-paper-doll", "slotLayout", { ...game.settings.get("sogrom-simple-dnd5e-paper-doll", "slotLayout"), camp: true });
   await dressHero(mod, hero);
-  const { sheet } = await openTab(hero);
+  let sheet;
+  const tidyId = tidy ? tidySheetId() : null;
+  if ( tidyId ) {
+    await hero.setFlag("core", "sheetClass", tidyId);
+    hero._sheet = null;
+    sheet = hero.sheet;
+    await sheet.render({ force: true });
+    await waitFor(() => sheet.rendered, "Tidy's sheet");
+  } else {
+    ({ sheet } = await openTab(hero));
+  }
   sheet.setPosition({ left: 560, top: 40, height: 1000 });
   const dock = await mod.dock.PaperDollDock.open(sheet);
   await waitFor(() => dock?.rendered, "the dock");
   // Let tooltips' spinners and images settle.
   await new Promise(r => setTimeout(r, 800));
-  return { sheet: sheet.id, dock: dock.id };
+  return { sheet: sheet.id, sheetClass: sheet.constructor.name, dock: dock.id };
 }
 
 /** Assertions for the Ember world. */
@@ -115,7 +142,8 @@ export async function tidySuite() {
   try {
     const mod = await load();
     await closeAll();
-    const tidy = Object.values(CONFIG.Actor.sheetClasses.character ?? {}).find(s => s.id.startsWith("tidy5e-sheet."));
+    // Tidy registers under the system's scope ("dnd5e.Tidy5eCharacterSheetQuadrone"), not its own.
+    const tidy = tidySheetId() && CONFIG.Actor.sheetClasses.character[tidySheetId()];
     report.check("Tidy 5e registers a character sheet", !!tidy, Object.keys(CONFIG.Actor.sheetClasses.character ?? {}).join(", "));
     if ( !tidy ) return { tidySuite: report.summary };
 
@@ -160,4 +188,11 @@ export async function tidySuite() {
 
 export async function teardown() {
   await closeAll();
+  const hero = game.actors.getName(HERO);
+  if ( hero?.getFlag("core", "sheetClass") && /\.Tidy5e/.test(hero.getFlag("core", "sheetClass")) ) {
+    await hero.unsetFlag("core", "sheetClass");
+    hero._sheet = null;
+  }
+  const layout = game.settings.get("sogrom-simple-dnd5e-paper-doll", "slotLayout");
+  if ( layout?.camp ) await game.settings.set("sogrom-simple-dnd5e-paper-doll", "slotLayout", { ...layout, camp: false });
 }

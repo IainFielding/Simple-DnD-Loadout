@@ -12,14 +12,8 @@
 
 import { MODULE_ID } from "../config.mjs";
 
-/** Item types that can ever go in a slot. Containers and loot never do; tools only by subtype. */
+/** Item types that can ever go in a slot. Containers and loot never do. */
 export const SLOTTABLE_TYPES = Object.freeze(["weapon", "equipment", "consumable", "tool"]);
-
-/**
- * Tool subtypes (`CONFIG.DND5E.toolTypes`) with a slot of their own: artisan's tools and musical
- * instruments. Gaming sets and the untyped kits — thieves' tools, herbalism kits — stay in the pack.
- */
-export const SLOTTED_TOOL_SUBTYPES = Object.freeze(["art", "music"]);
 
 /** dnd5e weapon subtypes that are ranged weapons (`CONFIG.DND5E.weaponTypes`). */
 export const RANGED_WEAPON_SUBTYPES = Object.freeze(["simpleR", "martialR"]);
@@ -66,7 +60,6 @@ export function itemFacts(item) {
   const properties = toArray(system.properties);
   const slottable = SLOTTABLE_TYPES.includes(type)
     && ((type !== "consumable") || WORN_CONSUMABLE_SUBTYPES.includes(subtype))
-    && ((type !== "tool") || SLOTTED_TOOL_SUBTYPES.includes(subtype))
     && ("equipped" in system);
 
   return {

@@ -56,7 +56,18 @@ export const GEAR = [
   { key: "lute", name: "Lute", type: "tool", img: "icons/tools/instruments/lute-gold-brown.webp",
     system: { type: { value: "music" } } },
   { key: "smiths", name: "Smith's Tools", type: "tool", img: "icons/skills/trades/smithing-tongs-metal-red.webp",
-    system: { type: { value: "art" } } }
+    system: { type: { value: "art" } } },
+  { key: "thieves", name: "Thieves' Tools", type: "tool", img: "icons/tools/hand/lockpicks-steel-grey.webp",
+    system: { type: { value: "" } } },
+  { key: "dice", name: "Dice", type: "tool", img: "icons/sundries/gaming/dice-runed-brown.webp",
+    system: { type: { value: "game" } } },
+  // Camp clothes.
+  { key: "travelers", name: "Traveler's Clothes", type: "equipment", img: "icons/equipment/chest/robe-layered-white.webp",
+    system: { type: { value: "clothing" } } },
+  { key: "smallclothes", name: "Smallclothes", type: "equipment", img: "icons/equipment/leg/cuisses-cloth-black.webp",
+    system: { type: { value: "clothing" } } },
+  { key: "shoes", name: "Soft Shoes", type: "equipment", img: "icons/equipment/feet/shoes-leather-simple-brown.webp",
+    system: { type: { value: "clothing" } } }
 ];
 
 /**

@@ -110,6 +110,12 @@ export const WEARABLES = [
   { name: "Alchemist's Supplies", type: "tool", subtype: "art", img: "icons/tools/cooking/mortar-herbs-yellow.webp", kind: "tools" },
   { name: "Weaver's Tools", type: "tool", subtype: "art", img: "icons/equipment/back/cloak-hooded-pink.webp", kind: "tools" },
   { name: "Jeweler's Tools", type: "tool", subtype: "art", img: "icons/commodities/gems/gem-rough-rose-teal.webp", kind: "tools" },
+  // Gaming sets and the untyped kits share the tools slot. Disguise Kit ships with a cloak icon.
+  { name: "Thieves' Tools", type: "tool", subtype: "", img: "icons/tools/hand/lockpicks-steel-grey.webp", kind: "tools" },
+  { name: "Herbalism Kit", type: "tool", subtype: "", img: "icons/containers/bags/pouch-leather-green.webp", kind: "tools" },
+  { name: "Disguise Kit", type: "tool", subtype: "", img: "icons/equipment/back/cloak-hooded-blue.webp", kind: "tools" },
+  { name: "Dice", type: "tool", subtype: "game", img: "icons/sundries/gaming/dice-runed-brown.webp", kind: "tools" },
+  { name: "Playing Cards", type: "tool", subtype: "game", img: "icons/sundries/gaming/playing-cards.webp", kind: "tools" },
 
   // --- Trinkets: worn magic with no body part of its own
   { name: "Ioun Stone of Protection", subtype: "wondrous", img: "icons/commodities/gems/gem-rough-ball-purple.webp", kind: "trinket" },
@@ -121,10 +127,6 @@ export const WEARABLES = [
 /** Items dnd5e can equip but no body slot should take. */
 export const NOT_SLOTTABLE = [
   { name: "Potion of Healing", type: "consumable", subtype: "potion", img: "icons/consumables/potions/potion-bottle-corked-red.webp" },
-  { name: "Thieves' Tools", type: "tool", subtype: "", img: "icons/tools/hand/lockpicks-steel-grey.webp" },
-  // Artisan's tools and instruments have slots; gaming sets and untyped kits do not.
-  { name: "Dice", type: "tool", subtype: "game", img: "icons/sundries/gaming/dice-runed-brown.webp" },
-  { name: "Disguise Kit", type: "tool", subtype: "", img: "icons/equipment/back/cloak-hooded-blue.webp" },
   { name: "Backpack", type: "container", subtype: "", img: "icons/containers/bags/pack-leather-white-tan.webp" },
   { name: "Ballista", type: "weapon", subtype: "siege", img: "icons/weapons/crossbows/crossbow-heavy-black.webp" },
   { name: "Gold Ring", type: "loot", subtype: "", img: "icons/equipment/finger/ring-band-gold.webp" }

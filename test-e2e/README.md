@@ -15,6 +15,8 @@ This harness covers what those unit tests can't:
   they can only observe is read-only.
 - Under Ember, the skin is applied, Ember's art actually loads, and a character still in Ember's
   builder never gets a dock.
+- Turning camp clothes on moves no existing slot, measured on screen in the tab and the dock.
+- The docked doll works beside Tidy 5e's sheet.
 
 The harness source is tracked in git but never shipped. `config.mjs` and the run output (`*.log`,
 `*.png`) are gitignored.
@@ -36,6 +38,7 @@ own server against it on port 30097.
 ```sh
 npm test                               # paperdoll: every suite
 npm run test:ember                     # paperdoll-ember: every suite plus the Ember skin
+node run.mjs --world=paperdoll-tidy    # every suite plus the dock beside Tidy 5e's sheet
 node run.mjs --only=dockSuite,domSuite
 node run.mjs --hold                    # leave the browsers open
 HEADED=1 npm test                      # watch it
@@ -49,9 +52,9 @@ asserts on that image; it's there for someone to look at.
 
 | World | Modules | Status |
 | --- | --- | --- |
-| `paperdoll` | the module only | 113 assertions, green (2026-09-14) |
-| `paperdoll-ember` | the module and Ember | 123 assertions, green (2026-09-14) |
-| `paperdoll-tidy` | the module and Tidy 5e Sheet | Blocked. Tidy 13.8.5 declares dnd5e ≤ 5.3.x and doesn't activate on 6.0.1. |
+| `paperdoll` | the module only | 149 assertions, green (2026-09-14) |
+| `paperdoll-ember` | the module and Ember | 159 assertions, green (2026-09-14) |
+| `paperdoll-tidy` | the module and Tidy 5e Sheet 14.1.0 | 156 assertions, green (2026-09-14) |
 
 All the gear is hand-built by `in-world/provision.mjs`, so no content pack is needed. At the start of
 every suite, each character is reset to "nothing equipped, no doll flags". In the Ember world, the
@@ -64,6 +67,6 @@ they use dnd5e's sheet.
 | --- | --- | --- |
 | `run.mjs`, `provision.mjs`, `lib/` | Node | Starts Foundry, joins with Playwright, prints reports |
 | `in-world/provision.mjs` | the page | Fixtures: the player, `[e2e] Doll Hero`, `[e2e] Stranger`, and the gear |
-| `in-world/harness.mjs` | GM page | Tab, equip, kit (ranged, light, instrument, tools), DOM, dock, API, settings and config-window suites |
+| `in-world/harness.mjs` | GM page | Tab, equip, kit (ranged, light, instrument, tools), camp clothes, the trinket bar, DOM, dock, API, settings and config-window suites |
 | `in-world/player.mjs` | player page | Permissions |
 | `in-world/render.mjs` | GM page | The showcase screenshot, and the Ember and Tidy suites |

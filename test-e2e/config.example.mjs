@@ -42,9 +42,8 @@ export const CORE_VERSION = "14.367";
  * `paperdoll-ember`  the same plus Ember, for the skin: the class, the borrowed art actually
  *                    loading, and Ember's creation sheet never getting a dock.
  * `paperdoll-tidy`   the same plus Tidy 5e Sheet: the dock beside a third-party character sheet.
- *                    **Blocked as of 2026-09-13:** Tidy 13.8.5 declares dnd5e `maximum: 5.3.x`, so
- *                    Foundry will not activate it on 6.0.1 and provisioning stops there. Re-run
- *                    `node provision.mjs paperdoll-tidy` once Tidy ships dnd5e 6 support.
+ *                    Green with Tidy 14.1.0 (2026-09-14). Tidy 13.x declared dnd5e ≤ 5.3.x and
+ *                    would not activate on 6.x.
  */
 export const WORLDS = {
   paperdoll: {

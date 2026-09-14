@@ -16,7 +16,8 @@ describe("buildDollContext", () => {
     const actor = fakeActor({ items: [{ name: "Boots of Speed", subtype: "wondrous", equipped: true }] });
     const ctx = buildDollContext(actor, { surface: "tab", editable: true });
     expect(ctx.groups.left.map(c => c.kind)).toEqual(["head", "neck", "back", "body", "wrists"]);
-    expect(ctx.groups.hands.map(c => c.key)).toEqual(["ranged-1", "mainHand", "offHand", "ranged-2"]);
+    expect(ctx.groups.hands.map(c => c.key)).toEqual(["mainHand", "offHand", "ranged-1", "ranged-2"]);
+    expect(ctx.showBar).toBe(true);
     expect(ctx.groups.kit.map(c => c.label)).toEqual(["light", "instrument", "tools"].map(k => `${MODULE_ID}.slot.kind.${k}`));
     const feet = ctx.groups.right.find(c => c.key === "feet");
     expect(feet.item.name).toBe("Boots of Speed");
@@ -67,6 +68,19 @@ describe("buildDollContext", () => {
     expect(buildDollContext(fakeActor()).ember).toBe(false);
     game.modules.get = id => (id === "ember" ? { active: true } : null);
     expect(buildDollContext(fakeActor()).ember).toBe(true);
+  });
+
+  it("groups camp slots together only when camp clothes are on", () => {
+    expect(buildDollContext(fakeActor()).groups.camp).toEqual([]);
+    game.settings._values[SETTINGS.slotLayout] = { camp: true };
+    expect(buildDollContext(fakeActor()).groups.camp.map(c => c.key)).toEqual(["campOutfit", "campUnderwear", "campFootwear"]);
+  });
+
+  it("keeps the bar while kit remains, and drops it only when kit and trinkets are both off", () => {
+    game.settings._values[SETTINGS.slotLayout] = { trinkets: 0 };
+    expect(buildDollContext(fakeActor()).showBar).toBe(true);
+    game.settings._values[SETTINGS.slotLayout] = { trinkets: 0, disabled: ["light", "instrument", "tools"] };
+    expect(buildDollContext(fakeActor()).showBar).toBe(false);
   });
 
   it("honours the slot layout setting", () => {
@@ -160,6 +174,21 @@ describe("equipToSlot", () => {
     const actor = fakeActor({ items: [{ name: "Chain Mail", subtype: "heavy" }] });
     expect(await equipToSlot(actor, itemNamed(actor, "Chain Mail"), "head", { notify: false })).toBe(false);
     expect(ui.notifications.shown).toEqual([]);
+  });
+});
+
+describe("camp clothes through the write path", () => {
+  it("packing worn boots into camp unequips them, and unpacking writes no item change", async () => {
+    game.settings._values[SETTINGS.slotLayout] = { camp: true };
+    const actor = fakeActor({ items: [{ name: "Boots of Speed", subtype: "wondrous", equipped: true }] });
+    const bootsItem = itemNamed(actor, "Boots of Speed");
+    expect(await equipToSlot(actor, bootsItem, "campFootwear", { sourceKey: "feet" })).toBe(true);
+    expect(bootsItem.system.equipped).toBe(false);
+    expect(readLayout(actor).layout.cells.find(c => c.key === "campFootwear").item.id).toBe(bootsItem.id);
+
+    actor.writes.length = 0;
+    expect(await unequipSlot(actor, "campFootwear")).toBe(true);
+    expect(actor.writes.map(w => w.op)).toEqual(["actor.update"]);
   });
 });
 

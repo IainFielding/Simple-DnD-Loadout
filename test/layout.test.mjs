@@ -5,8 +5,11 @@ import {
 } from "../scripts/data/layout.mjs";
 import {
   amulet, boots, chainMail, cloak, dagger, greatsword, handCrossbow, iounStone, leather, longbow, longsword, lute, make,
-  potion, ring, shield, smithsTools, torch
+  potion, ring, shield, smallclothes, smithsTools, softShoes, thievesTools, torch, travelersClothes
 } from "./helpers/items.mjs";
+
+/** The default doll with camp clothes switched on. */
+const campSlots = () => buildSlots({ camp: true });
 
 /** Resolve a layout from items and assignments on the default doll. */
 function layoutOf(items, assignments = {}, { strict = false, slots = buildSlots() } = {}) {
@@ -152,6 +155,11 @@ describe("resolveLayout", () => {
       expect(cell(layout, "offHand").blocked).toBe(true);
     });
 
+    it("thieves' tools land in the tools slot", () => {
+      const t = thievesTools({ equipped: true });
+      expect(itemIn(layoutOf([t]), "tools")).toBe(t.id);
+    });
+
     it("kit lands in its own slots and overflows to Also Worn, never to trinkets", () => {
       const items = [torch({ equipped: true, sort: 1 }), torch({ equipped: true, sort: 2 }), lute({ equipped: true }), smithsTools({ equipped: true })];
       const layout = layoutOf(items);
@@ -180,6 +188,99 @@ describe("resolveLayout", () => {
       const worn = longbow({ equipped: true });
       const spare = handCrossbow();
       expect(suggestSlot(layoutOf([worn, spare]), spare)).toBe("ranged-2");
+    });
+  });
+
+  describe("camp clothes", () => {
+    it("shows an assigned item only while it is not equipped", () => {
+      const clothes = travelersClothes();
+      expect(itemIn(layoutOf([clothes], { campOutfit: clothes.id }, { slots: campSlots() }), "campOutfit")).toBe(clothes.id);
+      const worn = travelersClothes({ equipped: true });
+      const layout = layoutOf([worn], { campOutfit: worn.id }, { slots: campSlots() });
+      expect(itemIn(layout, "campOutfit")).toBeNull();
+      expect(itemIn(layout, "body")).toBe(worn.id);
+    });
+
+    it("never auto-places into camp", () => {
+      const layout = layoutOf([softShoes(), smallclothes()], {}, { slots: campSlots() });
+      expect(layout.cells.filter(c => c.group === "camp").every(c => !c.item)).toBe(true);
+    });
+
+    it("an item cannot sit in two camp slots", () => {
+      const clothes = travelersClothes();
+      const layout = layoutOf([clothes], { campOutfit: clothes.id, campUnderwear: clothes.id }, { slots: campSlots() });
+      expect(itemIn(layout, "campOutfit")).toBe(clothes.id);
+      expect(itemIn(layout, "campUnderwear")).toBeNull();
+    });
+
+    it("packing an unworn item into camp does not equip it", () => {
+      const clothes = travelersClothes();
+      const plan = planPlace(layoutOf([clothes], {}, { slots: campSlots() }), { targetKey: "campOutfit", item: clothes });
+      expect(plan.assignments.campOutfit).toBe(clothes.id);
+      expect(plan.equip).toEqual([]);
+      expect(plan.unequip).toEqual([]);
+    });
+
+    it("dragging worn boots into camp unequips them and empties the feet slot", () => {
+      const b = boots({ equipped: true });
+      const plan = planPlace(layoutOf([b], {}, { slots: campSlots() }), { targetKey: "campFootwear", item: b, sourceKey: "feet" });
+      expect(plan.assignments.feet).toBeNull();
+      expect(plan.assignments.campFootwear).toBe(b.id);
+      expect(plan.unequip).toEqual([b.id]);
+      expect(plan.equip).toEqual([]);
+    });
+
+    it("dragging camp shoes onto the feet equips them", () => {
+      const shoes = softShoes();
+      const layout = layoutOf([shoes], { campFootwear: shoes.id }, { slots: campSlots() });
+      const plan = planPlace(layout, { targetKey: "feet", item: shoes, sourceKey: "campFootwear" });
+      expect(plan.assignments.campFootwear).toBeNull();
+      expect(plan.assignments.feet).toBe(shoes.id);
+      expect(plan.equip).toEqual([shoes.id]);
+    });
+
+    it("swapping camp shoes with worn boots swaps which pair is equipped", () => {
+      const shoes = softShoes();
+      const b = boots({ equipped: true });
+      const layout = layoutOf([shoes, b], { campFootwear: shoes.id }, { slots: campSlots() });
+      const plan = planPlace(layout, { targetKey: "feet", item: shoes, sourceKey: "campFootwear" });
+      expect(plan.assignments.feet).toBe(shoes.id);
+      expect(plan.assignments.campFootwear).toBe(b.id);
+      expect(plan.equip).toEqual([shoes.id]);
+      expect(plan.unequip).toEqual([b.id]);
+    });
+
+    it("replacing a packed outfit just unpacks the old one", () => {
+      const old = travelersClothes();
+      const neu = smallclothes();
+      const layout = layoutOf([old, neu], { campOutfit: old.id }, { slots: campSlots() });
+      const plan = planPlace(layout, { targetKey: "campOutfit", item: neu });
+      expect(plan.assignments.campOutfit).toBe(neu.id);
+      expect(plan.unequip).toEqual([]);
+      expect(plan.removed.map(r => r.item.id)).toEqual([old.id]);
+    });
+
+    it("taking an item out of camp writes no equipped change", () => {
+      const clothes = travelersClothes();
+      const plan = planRemove(layoutOf([clothes], { campOutfit: clothes.id }, { slots: campSlots() }), "campOutfit");
+      expect(plan.assignments.campOutfit).toBeNull();
+      expect(plan.unequip).toEqual([]);
+    });
+
+    it("the camp picker lists worn and unworn clothes alike", () => {
+      const worn = travelersClothes({ equipped: true });
+      const spare = smallclothes();
+      const layout = layoutOf([worn, spare], {}, { slots: campSlots() });
+      const list = candidatesFor(layout, "campUnderwear", [worn, spare, chainMail()]);
+      expect(list.map(c => c.item.name)).toEqual(["Smallclothes", "Traveler's Clothes"]);
+      expect(list[1].wornIn).toBe("body");
+    });
+
+    it("turning camp on changes nothing about the other slots' contents", () => {
+      const items = [chainMail({ equipped: true }), longsword({ equipped: true }), boots({ equipped: true })];
+      const without = snapshot(layoutOf(items));
+      const withCamp = snapshot(layoutOf(items, {}, { slots: campSlots() }));
+      for ( const [key, id] of Object.entries(without) ) expect(withCamp[key]).toBe(id);
     });
   });
 

@@ -115,7 +115,7 @@ function dropOn(slot, payload) {
 export async function all() {
   const mod = await load();
   const results = {};
-  const suites = { tabSuite, equipSuite, kitSuite, domSuite, dockSuite, apiSuite, settingsSuite, configSuite };
+  const suites = { tabSuite, equipSuite, kitSuite, campSuite, barSuite, domSuite, dockSuite, apiSuite, settingsSuite, configSuite };
   for ( const [name, suite] of Object.entries(suites) ) {
     const report = new Report();
     const hero = game.actors.getName(HERO);
@@ -147,8 +147,12 @@ async function tabSuite(report, mod, hero) {
   report.check("the nav shows the tab button", !!sheet.element.querySelector(`nav.tabs [data-tab="${TAB}"]`));
   report.check("the doll tab is active", sheet.element.querySelector(`section.tab[data-tab="${TAB}"]`)?.classList.contains("active"));
   report.equal("the default doll draws 21 slots", root().querySelectorAll(".pd-slot").length, 21);
-  report.equal("the hands row reads ranged, main, off, ranged", [...root().querySelectorAll(".pd-hands .pd-slot")].map(s => s.dataset.pdSlot), ["ranged-1", "mainHand", "offHand", "ranged-2"]);
-  report.equal("the kit row holds light, instrument and tools", [...root().querySelectorAll(".pd-kit .pd-slot")].map(s => s.dataset.pdSlot), ["light", "instrument", "tools"]);
+  report.equal("the hands row reads main, off, then ranged 1 and 2", [...root().querySelectorAll(".pd-hands .pd-slot")].map(s => s.dataset.pdSlot), ["mainHand", "offHand", "ranged-1", "ranged-2"]);
+  const hand = key => root().querySelector(`.pd-slot[data-pd-slot="${key}"]`).getBoundingClientRect();
+  report.check("the weapons in hand are left of the ranged slots", (hand("offHand").right < hand("ranged-1").left) && (hand("mainHand").right <= hand("offHand").left));
+  report.equal("the bar holds light, instrument, tools, then the trinkets", [...root().querySelectorAll(".pd-trinkets .pd-slot")].map(s => s.dataset.pdSlot), ["light", "instrument", "tools", "trinket-1", "trinket-2", "trinket-3", "trinket-4"]);
+  const sizes = [...root().querySelectorAll(".pd-trinkets .pd-slot")].map(s => Math.round(s.getBoundingClientRect().width));
+  report.check("kit slots are the same size as trinkets", new Set(sizes).size === 1, sizes.join(", "));
   report.check("no slot uses dnd5e's data-item-id", !root().querySelector("[data-item-id]"));
 
   sheet.changeTab("inventory", "primary");
@@ -275,6 +279,154 @@ async function kitSuite(report, mod, hero) {
   const picker = await waitFor(() => root()?.querySelector(".pd-picker"), "the light picker");
   report.equal("the light picker lists only light sources", [...picker.querySelectorAll(".pd-picker-name")].map(n => n.textContent.trim()), ["Torch"]);
   await sheet.close();
+}
+
+/** The fullest bar — five trinkets and the kit — fits the narrow dock on one line. */
+async function barSuite(report, mod, hero) {
+  const before = game.settings.get(MODULE, "slotLayout");
+  try {
+    await game.settings.set(MODULE, "slotLayout", { ...foundry.utils.deepClone(before), trinkets: 99 });
+    report.equal("the trinket count clamps to five", game.modules.get(MODULE) && mod.context.readLayout(hero).counts.trinket, 5);
+    const sheet = hero.sheet;
+    await sheet.render({ force: true });
+    await waitFor(() => sheet.rendered, "the sheet");
+    sheet.setPosition({ left: 700, top: 40 });
+    const dock = await mod.dock.PaperDollDock.open(sheet);
+    const bar = await waitFor(() => dock?.rendered && dock.element.querySelector(".pd-trinkets"), "the dock's bar");
+    await frame();
+    const slots = [...bar.querySelectorAll(".pd-slot")];
+    report.equal("the full bar has eight slots", slots.length, 8);
+    const tops = new Set(slots.map(s => Math.round(s.getBoundingClientRect().top)));
+    report.equal("…all on one line in the dock", tops.size, 1);
+    const weapons = ["mainHand", "offHand", "ranged-1", "ranged-2"].map(key => dock.element.querySelector(`.pd-slot[data-pd-slot="${key}"]`).getBoundingClientRect());
+    report.equal("all four weapon slots are the same size", new Set(weapons.map(r => `${Math.round(r.width)}x${Math.round(r.height)}`)).size, 1);
+    report.equal("…and fit the dock on one line", new Set(weapons.map(r => Math.round(r.top))).size, 1);
+    await sheet.close();
+  } finally {
+    await game.settings.set(MODULE, "slotLayout", before);
+  }
+}
+
+/** Where every slot is drawn, by key, in viewport pixels. */
+function slotRects(root) {
+  return Object.fromEntries([...root.querySelectorAll(".pd-slot")].map(el => {
+    const r = el.getBoundingClientRect();
+    return [el.dataset.pdSlot, [r.left, r.top, r.width, r.height].map(v => Math.round(v * 2) / 2)];
+  }));
+}
+
+/** Keys whose position or size differs between two slot maps, ignoring slots only one has. */
+function movedSlots(before, after) {
+  return Object.keys(before).filter(key => (key in after) && (JSON.stringify(before[key]) !== JSON.stringify(after[key])));
+}
+
+/** Camp clothes: behind the GM option, grouped, moving nothing, and packed rather than worn. */
+async function campSuite(report, mod, hero) {
+  const before = game.settings.get(MODULE, "slotLayout");
+  const layoutWith = camp => ({ ...foundry.utils.deepClone(before), camp });
+  const { equipToSlot, unequipSlot } = mod.actions;
+  try {
+    await game.settings.set(MODULE, "slotLayout", layoutWith(false));
+
+    // --- The tab: off, then on.
+    const { sheet, root } = await openTab(hero);
+    sheet.setPosition({ left: 560, top: 40, width: 800, height: 1000 });
+    await frame();
+    report.check("camp clothes are off by default: no camp group", !root().querySelector(".pd-camp"));
+    const tabOff = slotRects(root());
+
+    const dock = await mod.dock.PaperDollDock.open(sheet);
+    await waitFor(() => dock?.rendered && dock.element.querySelector(".sogrom-doll"), "the dock");
+    const dockRoot = () => dock.element.querySelector(".sogrom-doll");
+    await frame();
+    const dockOff = slotRects(dockRoot());
+
+    await game.settings.set(MODULE, "slotLayout", layoutWith(true));
+    await waitFor(() => root()?.querySelectorAll(".pd-camp .pd-slot").length === 3, "the camp group in the tab");
+    await waitFor(() => dockRoot()?.querySelectorAll(".pd-camp .pd-slot").length === 3, "the camp group in the dock");
+    await frame();
+
+    const group = root().querySelector(".pd-camp");
+    report.equal("the GM option adds exactly the three camp slots, in order",
+      [...group.querySelectorAll(".pd-slot")].map(s => s.dataset.pdSlot), ["campOutfit", "campUnderwear", "campFootwear"]);
+    const style = getComputedStyle(group);
+    report.check("the three are grouped inside one visible border",
+      (parseFloat(style.borderTopWidth) >= 1) && (style.borderTopStyle !== "none"), `${style.borderTopWidth} ${style.borderTopStyle}`);
+    report.check("the group sits inside the stage", !!group.closest(".pd-stage"));
+
+    const tabMoved = movedSlots(tabOff, slotRects(root()));
+    report.equal("turning camp on moves no existing slot in the sheet tab", tabMoved, []);
+    const dockMoved = movedSlots(dockOff, slotRects(dockRoot()));
+    report.equal("…or in the docked window", dockMoved, []);
+
+    // The group must not sit on top of another slot.
+    const g = group.getBoundingClientRect();
+    const overlaps = [...root().querySelectorAll(".pd-slot:not(.pd-camp .pd-slot)")].filter(el => {
+      const r = el.getBoundingClientRect();
+      return (r.left < g.right) && (r.right > g.left) && (r.top < g.bottom) && (r.bottom > g.top);
+    }).map(el => el.dataset.pdSlot);
+    report.equal("the camp group covers no other slot", overlaps, []);
+    const d = dockRoot().querySelector(".pd-camp").getBoundingClientRect();
+    const dockOverlaps = [...dockRoot().querySelectorAll(".pd-slot:not(.pd-camp .pd-slot)")].filter(el => {
+      const r = el.getBoundingClientRect();
+      return (r.left < d.right) && (r.right > d.left) && (r.top < d.bottom) && (r.bottom > d.top);
+    }).map(el => el.dataset.pdSlot);
+    report.equal("…in the dock either", dockOverlaps, []);
+
+    // --- Packed, not worn.
+    const boots = gear(hero, "boots");
+    await equipToSlot(hero, boots, "feet", { notify: false });
+    report.check("boots of speed on the feet are equipped", boots.system.equipped);
+    report.check("dragging them into camp footwear succeeds", await equipToSlot(hero, boots, "campFootwear", { sourceKey: "feet", notify: false }));
+    report.check("…and unequips them, so their magic stops", !boots.system.equipped);
+
+    const shoes = gear(hero, "shoes");
+    await equipToSlot(hero, shoes, "feet", { notify: false });
+    report.check("soft shoes go on the feet", shoes.system.equipped);
+    report.check("the packed boots stay in camp meanwhile", slotItem(mod, hero, "campFootwear") === boots.id);
+
+    report.check("swap: boots from camp onto the feet", await equipToSlot(hero, boots, "feet", { sourceKey: "campFootwear", notify: false }));
+    report.check("…equips the boots", boots.system.equipped);
+    report.check("…and packs the shoes into camp, unequipped", !shoes.system.equipped && slotItem(mod, hero, "campFootwear") === shoes.id);
+
+    const clothes = gear(hero, "travelers");
+    report.check("traveler's clothes pack as a camp outfit", await equipToSlot(hero, clothes, "campOutfit", { notify: false }));
+    report.check("…without being equipped", !clothes.system.equipped);
+    report.check("smallclothes pack as underwear", await equipToSlot(hero, gear(hero, "smallclothes"), "campUnderwear", { notify: false }));
+    report.check("chain mail is refused as a camp outfit", !(await equipToSlot(hero, gear(hero, "chain"), "campOutfit", { notify: false })));
+
+    // The menu on a camp slot unpacks rather than unequips.
+    await waitFor(() => root()?.querySelector('.pd-slot[data-pd-slot="campOutfit"].is-filled'), "the packed outfit drawn");
+    const slot = root().querySelector('.pd-slot[data-pd-slot="campOutfit"]');
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rect.x + 5, clientY: rect.y + 5 }));
+    const menu = await waitFor(() => document.querySelector("#context-menu"), "the camp slot menu");
+    const labels = [...menu.querySelectorAll(".context-item")].map(li => li.textContent.trim());
+    report.check("a camp slot's menu offers Take Out of Camp, not Unequip", labels.includes("Take Out of Camp") && !labels.includes("Unequip"), labels.join(" | "));
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    report.check("taking the outfit out of camp works", await unequipSlot(hero, "campOutfit", { notify: false }));
+    report.check("…and leaves it unequipped", !clothes.system.equipped && slotItem(mod, hero, "campOutfit") === null);
+
+    // --- The GM switch: off again hides the group, and the packed items are simply in the pack.
+    await game.settings.set(MODULE, "slotLayout", layoutWith(false));
+    await waitFor(() => !root()?.querySelector(".pd-camp"), "the camp group to go");
+    report.check("turning the option off removes the group", true);
+    report.check("…and nothing packed became equipped", !shoes.system.equipped && !gear(hero, "smallclothes").system.equipped);
+
+    await sheet.close();
+
+    // --- The tools slot takes kits and gaming sets.
+    report.check("thieves' tools go in the tools slot", await equipToSlot(hero, gear(hero, "thieves"), "tools", { notify: false }));
+    report.check("dice go in the tools slot", await equipToSlot(hero, gear(hero, "dice"), "tools", { notify: false }));
+    const tab = await openTab(hero);
+    tab.root().querySelector('.pd-slot[data-pd-slot="instrument"]').click();
+    const instrumentPicker = await waitFor(() => tab.root()?.querySelector(".pd-picker"), "the instrument picker");
+    report.equal("the instrument picker still lists only instruments", [...instrumentPicker.querySelectorAll(".pd-picker-name")].map(n => n.textContent.trim()), ["Lute"]);
+    await tab.sheet.close();
+  } finally {
+    await game.settings.set(MODULE, "slotLayout", before);
+  }
 }
 
 /** Real events at the rendered doll. */
@@ -440,7 +592,7 @@ async function settingsSuite(report, mod, hero) {
     await waitFor(() => root()?.querySelectorAll('.pd-slot[data-pd-kind="ring"]').length === 4, "four ring slots");
     report.check("more rings appear on an open sheet", true);
     report.check("disabled slots disappear", !root().querySelector('.pd-slot[data-pd-kind="wrists"]'));
-    report.check("zero trinkets removes the trinket row", !root().querySelector(".pd-trinkets"));
+    report.check("zero trinkets leaves the kit on the bar and no trinket slots", !root().querySelector(".pd-slot--trinket") && root().querySelectorAll(".pd-trinkets .pd-slot").length === 3);
 
     // Something worn in a slot that is switched off stays equipped and is listed.
     await game.settings.set(MODULE, "slotLayout", { rings: 1, trinkets: 0, disabled: [] });
@@ -474,6 +626,7 @@ async function configSuite(report, mod, hero) {
   await slots.render({ force: true });
   await waitFor(() => slots.rendered && slots.element.querySelector("range-picker[name=rings]"), "the slot config form");
   report.equal("the slot form offers every toggleable slot", slots.element.querySelectorAll('input[name^="enabled."]').length, 10);
+  report.check("…and the camp clothes switch", !!slots.element.querySelector('input[name="camp"]'));
   report.check("…and a ranged slot count", !!slots.element.querySelector("range-picker[name=ranged]"));
   try {
     slots.element.querySelector("range-picker[name=rings]").value = 3;
@@ -482,7 +635,7 @@ async function configSuite(report, mod, hero) {
     slots.element.querySelector('input[name="enabled.waist"]').checked = false;
     slots.element.querySelector('input[name="enabled.instrument"]').checked = false;
     await slots.submit();
-    report.equal("submitting saves the layout", game.settings.get(MODULE, "slotLayout"), { rings: 3, trinkets: 2, ranged: 1, disabled: ["waist", "instrument"] });
+    report.equal("submitting saves the layout", game.settings.get(MODULE, "slotLayout"), { rings: 3, trinkets: 2, ranged: 1, camp: false, disabled: ["waist", "instrument"] });
     report.equal("…which the doll reads", mod.context.readLayout(hero).layout.cells.filter(c => c.kind === "ring").length, 3);
   } finally {
     await game.settings.set(MODULE, "slotLayout", before);

@@ -92,9 +92,11 @@ function onKeyDown(event, ctx) {
 function createContextMenu(ctx) {
   const ContextMenu = foundry.applications.ux.ContextMenu.implementation;
   const itemOf = target => ctx.actor.items.get(target.dataset.pdItem ?? target.dataset.pdUnslotted ?? "");
+  const inCamp = target => target.dataset.pdGroup === "camp";
   const canAttuneItem = target => {
     const item = itemOf(target);
-    return ctx.editable && !!item && ["required", "optional"].includes(item.system.attunement);
+    // A packed item is not worn, so attunement is not offered from its camp slot.
+    return ctx.editable && !!item && !inCamp(target) && ["required", "optional"].includes(item.system.attunement);
   };
 
   new ContextMenu(ctx.root, ".pd-slot.is-filled, .pd-chip", [
@@ -128,9 +130,15 @@ function createContextMenu(ctx) {
       onClick: (_event, target) => openPicker(ctx, target.dataset.pdSlot)
     },
     {
+      label: `${MODULE_ID}.menu.unpack`,
+      icon: "<i class=\"fa-solid fa-box-open\"></i>",
+      visible: target => ctx.editable && inCamp(target),
+      onClick: (_event, target) => unequipSlot(ctx.actor, target.dataset.pdSlot)
+    },
+    {
       label: `${MODULE_ID}.menu.unequip`,
       icon: "<i class=\"fa-solid fa-hand\"></i>",
-      visible: () => ctx.editable,
+      visible: target => ctx.editable && !inCamp(target),
       onClick: (_event, target) => {
         if ( target.dataset.pdSlot ) return unequipSlot(ctx.actor, target.dataset.pdSlot);
         return itemOf(target)?.update({ "system.equipped": false });

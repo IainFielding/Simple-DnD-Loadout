@@ -7,7 +7,7 @@
 --}}
 <button type="button"
         class="pd-slot pd-slot--{{kind}} {{#if item}}is-filled rarity-{{item.rarity}}{{else}}is-empty{{/if}} {{#if blocked}}is-blocked{{/if}} {{#if conflict}}is-conflict{{/if}} {{#if item.inert}}is-inert{{/if}}"
-        data-pd-slot="{{key}}" data-pd-kind="{{kind}}"
+        data-pd-slot="{{key}}" data-pd-kind="{{kind}}" data-pd-group="{{group}}"
         {{#if item}}data-pd-item="{{item.id}}" data-pd-uuid="{{item.uuid}}" {{#if draggable}}draggable="true"{{/if}}{{/if}}
         data-tooltip="{{tooltip}}" {{#if tooltipClass}}data-tooltip-class="{{tooltipClass}}"{{/if}}
         aria-label="{{ariaLabel}}">

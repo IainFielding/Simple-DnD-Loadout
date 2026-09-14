@@ -68,3 +68,7 @@ export const javelin = (extra = {}) => make({ name: "Javelin", type: "weapon", s
 export const torch = (extra = {}) => make({ name: "Torch", type: "consumable", subtype: "trinket", img: "icons/sundries/lights/torch-brown-lit.webp", ...extra });
 export const lute = (extra = {}) => make({ name: "Lute", type: "tool", subtype: "music", ...extra });
 export const smithsTools = (extra = {}) => make({ name: "Smith's Tools", type: "tool", subtype: "art", ...extra });
+export const thievesTools = (extra = {}) => make({ name: "Thieves' Tools", type: "tool", subtype: "", ...extra });
+export const travelersClothes = (extra = {}) => make({ name: "Traveler's Clothes", subtype: "clothing", img: "icons/equipment/chest/shirt-simple-white.webp", ...extra });
+export const smallclothes = (extra = {}) => make({ name: "Smallclothes", subtype: "clothing", ...extra });
+export const softShoes = (extra = {}) => make({ name: "Soft Shoes", subtype: "clothing", img: "icons/equipment/feet/shoes-leather-simple-brown.webp", ...extra });

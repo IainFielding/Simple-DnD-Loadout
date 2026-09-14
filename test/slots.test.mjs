@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  COUNTED_KINDS, MAX_RANGED, MAX_RINGS, MAX_TRINKETS, OPTIONAL_KINDS, SLOT_GROUPS, SLOT_KINDS, TOGGLED_KINDS,
-  buildSlots, kindOfKey, layoutFromForm, normaliseLayout, slotKey
+  CAMP_KINDS, COUNTED_KINDS, MAX_RANGED, MAX_RINGS, MAX_TRINKETS, OPTIONAL_KINDS, SLOT_GROUPS, SLOT_KINDS, TOGGLED_KINDS,
+  buildSlots, isCampSlot, kindOfKey, layoutFromForm, normaliseLayout, slotKey
 } from "../scripts/data/slots.mjs";
 
 describe("SLOT_KINDS", () => {
@@ -44,12 +44,17 @@ describe("slotKey / kindOfKey", () => {
 
 describe("normaliseLayout", () => {
   it("returns the defaults for nothing at all", () => {
-    expect(normaliseLayout(undefined)).toEqual({ rings: 2, trinkets: 4, ranged: 2, disabled: [] });
-    expect(normaliseLayout("garbage")).toEqual({ rings: 2, trinkets: 4, ranged: 2, disabled: [] });
+    expect(normaliseLayout(undefined)).toEqual({ rings: 2, trinkets: 4, ranged: 2, camp: false, disabled: [] });
+    expect(normaliseLayout("garbage")).toEqual({ rings: 2, trinkets: 4, ranged: 2, camp: false, disabled: [] });
+  });
+
+  it("camp clothes are off unless explicitly on", () => {
+    expect(normaliseLayout({ camp: true }).camp).toBe(true);
+    for ( const value of [undefined, false, "true", 1] ) expect(normaliseLayout({ camp: value }).camp).toBe(false);
   });
 
   it("gives a layout saved before ranged slots existed the default two", () => {
-    expect(normaliseLayout({ rings: 3, trinkets: 2, disabled: ["head"] })).toEqual({ rings: 3, trinkets: 2, ranged: 2, disabled: ["head"] });
+    expect(normaliseLayout({ rings: 3, trinkets: 2, disabled: ["head"] })).toEqual({ rings: 3, trinkets: 2, ranged: 2, camp: false, disabled: ["head"] });
   });
 
   it("clamps ranged slots to 0–2 and treats zero as disabled", () => {
@@ -59,6 +64,13 @@ describe("normaliseLayout", () => {
 
   it("clamps counts into range and coerces strings", () => {
     expect(normaliseLayout({ rings: 99, trinkets: -3 })).toMatchObject({ rings: MAX_RINGS, trinkets: 0 });
+  });
+
+  it("allows at most five trinkets, clamping a layout saved with more", () => {
+    expect(MAX_TRINKETS).toBe(5);
+    expect(normaliseLayout({ trinkets: 8 }).trinkets).toBe(5);
+    const bar = buildSlots({ trinkets: 99 }).filter(s => ["kit", "trinkets"].includes(s.group));
+    expect(bar).toHaveLength(8);
     expect(normaliseLayout({ rings: "3", trinkets: "2" })).toMatchObject({ rings: 3, trinkets: 2 });
     expect(normaliseLayout({ rings: 0 }).rings).toBe(1);
   });
@@ -81,6 +93,11 @@ describe("layoutFromForm", () => {
     expect(layout.disabled.sort()).toEqual(["back", "hands", "instrument", "neck", "tools", "waist", "wrists"]);
   });
 
+  it("reads the camp checkbox", () => {
+    expect(layoutFromForm({ camp: true, enabled: {} }).camp).toBe(true);
+    expect(layoutFromForm({ enabled: {} }).camp).toBe(false);
+  });
+
   it("governs trinkets and ranged slots by count, not a checkbox", () => {
     expect(layoutFromForm({ trinkets: 3, ranged: 2, enabled: {} }).disabled).not.toContain("trinket");
     expect(layoutFromForm({ trinkets: 3, ranged: 2, enabled: {} }).disabled).not.toContain("ranged");
@@ -94,17 +111,34 @@ describe("buildSlots", () => {
     const keys = buildSlots().map(s => s.key);
     expect(keys).toEqual([
       "head", "neck", "back", "body", "wrists", "hands", "waist", "feet", "ring-1", "ring-2",
-      "ranged-1", "mainHand", "offHand", "ranged-2",
+      "mainHand", "offHand", "ranged-1", "ranged-2",
       "light", "instrument", "tools",
       "trinket-1", "trinket-2", "trinket-3", "trinket-4"
     ]);
   });
 
-  it("draws ranged slots either side of the hands, in keyboard order", () => {
+  it("draws the hands on the left and the ranged slots on the right, in keyboard order", () => {
     const hands = keys => buildSlots(keys).filter(s => s.group === "hands").map(s => s.key);
-    expect(hands({ ranged: 2 })).toEqual(["ranged-1", "mainHand", "offHand", "ranged-2"]);
-    expect(hands({ ranged: 1 })).toEqual(["ranged", "mainHand", "offHand"]);
+    expect(hands({ ranged: 2 })).toEqual(["mainHand", "offHand", "ranged-1", "ranged-2"]);
+    expect(hands({ ranged: 1 })).toEqual(["mainHand", "offHand", "ranged"]);
     expect(hands({ ranged: 0 })).toEqual(["mainHand", "offHand"]);
+  });
+
+  it("adds the three camp slots only when camp clothes are on, after every existing slot", () => {
+    const off = buildSlots().map(s => s.key);
+    const on = buildSlots({ camp: true }).map(s => s.key);
+    expect(off.some(k => k.startsWith("camp"))).toBe(false);
+    expect(on).toEqual([...off, "campOutfit", "campUnderwear", "campFootwear"]);
+    expect(buildSlots({ camp: true }).filter(isCampSlot).map(s => s.group)).toEqual(["camp", "camp", "camp"]);
+  });
+
+  it("camp kinds are neither toggled nor counted one by one", () => {
+    expect(CAMP_KINDS).toEqual(["campOutfit", "campUnderwear", "campFootwear"]);
+    for ( const kind of CAMP_KINDS ) {
+      expect(TOGGLED_KINDS).not.toContain(kind);
+      expect(OPTIONAL_KINDS).not.toContain(kind);
+    }
+    expect(normaliseLayout({ disabled: ["campOutfit"] }).disabled).toEqual([]);
   });
 
   it("drops kit slots the GM switched off", () => {

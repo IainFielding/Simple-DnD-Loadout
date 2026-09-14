@@ -77,6 +77,8 @@ export function buildDollContext(actor, { surface = "tab", editable = actor?.isO
     showName: surface === "dock",
     portrait,
     groups,
+    // Kit and trinkets share one bar; it is drawn when either has a slot.
+    showBar: (groups.kit.length + groups.trinkets.length) > 0,
     unslotted: layout.unslotted.map(item => ({ ...dressItem(item), draggable: editable })),
     stats: {
       ac: Number.isFinite(attributes.ac?.value) ? attributes.ac.value : null,

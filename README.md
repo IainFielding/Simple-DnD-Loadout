@@ -7,8 +7,8 @@
 Dress your character the way an RPG should let you, in Foundry VTT and the D&D 5e system.
 
 Your character's portrait fills the frame, with a slot for every place gear goes: head, neck, back,
-body, wrists, hands, waist, feet, rings, both hands, two slung ranged weapons, a light source, a
-musical instrument, artisan's tools and a row of trinkets. Drag armour, weapons, tools and wondrous
+body, wrists, hands, waist, feet, rings, both hands, two slung ranged weapons, and a bar holding a
+light source, a musical instrument, a set of tools and your trinkets. Drag armour, weapons, tools and wondrous
 items onto it, straight from the inventory. It sits in its own **Paper Doll** tab on the
 character sheet, or in a window docked beside the sheet that follows it around.
 
@@ -31,12 +31,18 @@ character sheet, or in a window docked beside the sheet that follows it around.
 - **Both hands work the way they should.** A greatsword takes both hands. Equipping one clears the
   off hand, which shows the weapon's outline until you let go. One-handed weapons and shields fit
   either hand they belong in.
-- **Bows slung, blades in hand.** Two ranged slots sit either side of the hands. A longbow equipped
+- **Blades in hand, bows slung.** Main hand and off hand sit on the left, two ranged slots on the
+  right. A longbow equipped
   from the inventory goes there, and a bow that's slung doesn't tie up your off hand. Drag it into
   your main hand when you draw it, and then it does.
-- **A kit row for the tools of the trade.** A light source, a musical instrument and a set of
-  artisan's tools each have a slot of their own. A torch or lantern can also go in your off hand.
-  A tinderbox isn't mistaken for a light, even though the system gives it a torch icon.
+- **The tools of the trade.** A light source, a musical instrument and a set of tools each have a
+  slot at the start of the trinket bar. The tools slot takes artisan's tools, gaming sets and kits
+  such as thieves' tools. A torch or lantern can also go in your off hand. A tinderbox isn't
+  mistaken for a light, even though the system gives it a torch icon.
+- **Camp clothes, if your GM wants them.** Like Baldur's Gate 3, a separate **Camp** group holds an
+  outfit, underwear and footwear. Camp clothes are packed rather than worn, so putting something
+  there unequips it and its armour and magic don't apply. Drag it back onto a normal slot to wear
+  it.
 - **Drag, click or right-click.**
   - Drag an item from the inventory onto a slot. While you drag, the slots that would take it light
     up and the rest fade.
@@ -77,7 +83,7 @@ These are under **Configure Settings → Module Settings**.
 | Open Docked Doll With Sheets | Off | *Per player.* Opens the dock whenever a character sheet opens. |
 | Strict Slot Matching | Off | When off, any worn accessory fits any accessory slot, so a player can put homebrew gear wherever it makes sense. When on, boots only go on feet, cloaks only on the back, and so on. Armour, shields, weapons and rings follow the rules either way. |
 | Dropping New Items | Gamemaster only | Who may drop an item the character doesn't already carry, from a compendium or the Items sidebar, onto the doll. It's added to the inventory and equipped. |
-| Configure Slots | 2 rings, 2 ranged, 4 trinkets | How many ring slots (1–4), ranged weapon slots (0–2) and trinket slots (0–8) every doll has, and which optional slots (head, neck, back, wrists, hands, waist, feet, light source, instrument, artisan's tools) are shown. |
+| Configure Slots | 2 rings, 2 ranged, 4 trinkets, camp clothes off | How many ring slots (1–4), ranged weapon slots (0–2) and trinket slots (0–5) every doll has, which optional slots (head, neck, back, wrists, hands, waist, feet, light source, instrument, tools) are shown, and whether the three camp clothes slots are on. |
 
 **Hotkey:** **Shift + P** opens or closes the docked doll for your selected token's character, or
 your own character if no token is selected. You can change it under **Configure Controls**.
@@ -87,7 +93,8 @@ your own character if no token is selected. You can change it under **Configure 
 | Module | Works together? | What happens |
 | --- | --- | --- |
 | [Ember](https://foundryvtt.com/packages/ember) | Yes, automatic | Ember skin, and stays out of Ember's character builder. See [Running alongside Ember](#running-alongside-ember). |
-| Alternative character sheets (Tidy 5e Sheet and similar) | Docked doll only | The tab is added only to the D&D 5e system's own sheet. The docked doll is built to work beside any sheet made the standard Foundry way, which includes Tidy 5e. That hasn't been confirmed in a live world yet, because Tidy 5e doesn't support D&D 5e 6.x yet. |
+| [Tidy 5e Sheet](https://foundryvtt.com/packages/tidy5e-sheet) | Yes, docked | Tested with Tidy 5e 14.1.0. The Paper Doll button appears in Tidy's sheet header, and the docked doll sits beside Tidy's sheet and follows it. The tab is added only to the D&D 5e system's own sheet. |
+| Other character sheets | Docked doll | The docked doll is built to work beside any character sheet made the standard Foundry way. Only Tidy 5e has been tested. |
 | Content modules (Player's Handbook, DMG, homebrew) | Yes | Anything using the standard D&D 5e item types can be worn or carried. Unusually named homebrew goes to a sensible slot, and in the default lenient mode can be moved wherever you like. |
 | [Simple D&D Character Creator](https://foundryvtt.com/packages/sogrom-dnd5e-character-creator), [Simple D&D Magic Shop](https://foundryvtt.com/packages/sogrom-simple-dnd5e-magic-shop) | Yes | Same look, same Ember skin. |
 

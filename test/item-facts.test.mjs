@@ -30,7 +30,9 @@ describe("itemFacts", () => {
     expect(itemFacts(source({ name: "x", type: "equipment" })).slottable).toBe(true);
     expect(itemFacts(source({ name: "x", type: "consumable", subtype: "wand" })).slottable).toBe(true);
     expect(itemFacts(source({ name: "x", type: "consumable", subtype: "potion" })).slottable).toBe(false);
-    expect(itemFacts(source({ name: "x", type: "tool" })).slottable).toBe(false);
+    // Every tool has a slot: instruments their own, everything else the tools slot.
+    expect(itemFacts(source({ name: "x", type: "tool" })).slottable).toBe(true);
+    expect(itemFacts(source({ name: "x", type: "tool", subtype: "game" })).slottable).toBe(true);
     expect(itemFacts(source({ name: "x", type: "loot" })).slottable).toBe(false);
   });
 

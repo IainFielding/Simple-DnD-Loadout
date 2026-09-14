@@ -7,7 +7,7 @@
  *
  *   1. flag      a kind pinned on the item (another module, a GM macro) — always wins
  *   2. type      what dnd5e's own data says: weapon (melee or ranged), armour, shield, ring,
- *                artisan's tools, musical instrument
+ *                musical instrument, and every other tool — artisan's tools, gaming sets, kits
  *   3. name      the head noun of the name: "Cloak of Protection" → back
  *   4. icon      the core icon folder: `icons/equipment/feet/…` → feet
  *   5. fallback  held rods and wands to the main hand, clothing to the body, anything else worn
@@ -102,9 +102,9 @@ export function classify(facts) {
     return { kind: facts.ranged ? "ranged" : "mainHand", source: "type" };
   }
   if ( facts.type === "tool" ) {
-    if ( facts.subtype === "music" ) return { kind: "instrument", source: "type" };
-    if ( facts.subtype === "art" ) return { kind: "tools", source: "type" };
-    return null;
+    // Instruments have their own slot. Everything else a character works with — artisan's tools,
+    // gaming sets, thieves' tools, herbalism and disguise kits — shares the tools slot.
+    return { kind: facts.subtype === "music" ? "instrument" : "tools", source: "type" };
   }
   if ( facts.type === "equipment" ) {
     if ( facts.subtype === "shield" ) return { kind: "offHand", source: "type" };
@@ -176,6 +176,22 @@ export function isHeldImplement(facts) {
 }
 
 /**
+ * Camp clothes take clothing, not gear. The outfit and underwear slots take anything clothing or
+ * body-worn that is not armour; the footwear slot takes anything that goes on the feet. The same in
+ * lenient and strict modes: nothing in a camp slot is worn, so there is no mechanic to protect.
+ * @param {string} kind
+ * @param {import("./item-facts.mjs").ItemFacts} facts
+ * @param {Classification} natural
+ * @returns {boolean}
+ */
+function acceptsCamp(kind, facts, natural) {
+  if ( facts.type !== "equipment" ) return false;
+  if ( ARMOR_SUBTYPES.includes(facts.subtype) || (facts.subtype === "shield") ) return false;
+  if ( kind === "campFootwear" ) return natural.kind === "feet";
+  return (facts.subtype === "clothing") || (natural.kind === "body");
+}
+
+/**
  * Whether a slot kind may hold an item.
  *
  * Two modes, set by the `strictSlots` world setting:
@@ -200,10 +216,18 @@ export function accepts(kind, facts, { strict = false } = {}) {
 
   const refuse = { ok: false, reason: "wrongSlot" };
   const allow = { ok: true };
+  const isWeapon = facts.type === "weapon";
+
+  // Camp clothes are judged before a pinned flag: they ask what an item *is* (clothes, shoes), not
+  // where it is worn in battle, so boots pinned to a trinket slot are still footwear in camp.
+  if ( SLOT_KINDS[kind].camp ) {
+    const unpinned = facts.slotOverride ? classify({ ...facts, slotOverride: null }) : natural;
+    return acceptsCamp(kind, facts, unpinned) ? allow : refuse;
+  }
+
   // A kind pinned by flag is a deliberate decision; honour it in both modes.
   if ( natural.source === "flag" ) return natural.kind === kind ? allow : refuse;
 
-  const isWeapon = facts.type === "weapon";
   // Kit is carried for use, not worn: it never fills a body or trinket slot.
   const isKit = ["light", "instrument", "tools"].includes(natural.kind);
   const isShield = (facts.type === "equipment") && (facts.subtype === "shield");

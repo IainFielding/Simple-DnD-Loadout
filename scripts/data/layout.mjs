@@ -10,6 +10,10 @@
  *
  *   **`system.equipped` wins.** The flag is a remembered preference, not a claim.
  *
+ * Camp slots are the one exception, and the mirror image: they hold clothes packed for downtime,
+ * so they show an assigned item only while it is *not* equipped. Equip it anywhere and it leaves
+ * camp; put it in camp and it is unequipped, so a camp pair of Boots of Speed grants no speed.
+ *
  * So an assignment to an unequipped, deleted or no-longer-fitting item is ignored (the slot draws
  * empty), and an equipped item with no assignment is placed where it naturally belongs. Nothing is
  * written while resolving — rendering a sheet must never update a document — but a stale entry
@@ -26,6 +30,7 @@
  */
 
 import { accepts, classify } from "./classify.mjs";
+import { isCampSlot } from "./slots.mjs";
 
 /**
  * @typedef {import("./slots.mjs").SlotInstance & {
@@ -72,7 +77,9 @@ export function resolveLayout({ slots, assignments = {}, items = [], strict = fa
   // 1. Honour what the player chose, where it is still true.
   for ( const cell of cells ) {
     const item = byId.get(assignments?.[cell.key] ?? "");
-    if ( !item?.equipped || !item.slottable || used.has(item.id) ) continue;
+    if ( !item?.slottable || used.has(item.id) ) continue;
+    // Worn slots show equipped items; camp slots show packed, unequipped ones.
+    if ( item.equipped === isCampSlot(cell) ) continue;
     if ( !accepts(cell.kind, item, { strict }).ok ) continue;
     Object.assign(cell, { item, pinned: true });
     used.add(item.id);
@@ -199,7 +206,7 @@ export function planPlace(layout, { targetKey, item, sourceKey = null }) {
   const itemsById = new Map(layout.cells.filter(c => c.item).map(c => [c.item.id, c.item]));
   const placed = [{ item, key: targetKey }];
   const removed = [];
-  const unequip = new Set();
+  const involved = new Map([[item.id, item]]);
 
   // Lift the item out of wherever it currently sits.
   for ( const [key, id] of Object.entries(next) ) if ( (id === item.id) && (key !== targetKey) ) next[key] = null;
@@ -214,11 +221,11 @@ export function planPlace(layout, { targetKey, item, sourceKey = null }) {
     // hand — so a swap never lands one in a position the two-handed rule below would undo.
     const swapOk = source && (next[sourceKey] === null)
       && accepts(source.kind, occupant, { strict: layout.strict }).ok;
+    involved.set(occupant.id, occupant);
     if ( swapOk ) {
       next[sourceKey] = occupant.id;
       placed.push({ item: occupant, key: sourceKey });
     } else {
-      unequip.add(occupant.id);
       removed.push({ item: occupant, key: targetKey });
     }
   }
@@ -229,18 +236,24 @@ export function planPlace(layout, { targetKey, item, sourceKey = null }) {
     const offId = offKey ? next[offKey] : null;
     if ( offId && (offId !== item.id) ) {
       next[offKey] = null;
-      unequip.add(offId);
+      involved.set(offId, itemsById.get(offId));
       removed.push({ item: itemsById.get(offId), key: offKey });
     }
   }
 
-  return {
-    assignments: next,
-    equip: item.equipped ? [] : [item.id],
-    unequip: [...unequip],
-    placed,
-    removed
-  };
+  // Equipped state follows from where each touched item ends up: in a worn slot it is equipped;
+  // in a camp slot, or nowhere, it is not. Items this plan did not touch keep their state.
+  const wornKeys = new Set(layout.cells.filter(c => !isCampSlot(c)).map(c => c.key));
+  const worn = id => Object.entries(next).some(([key, value]) => (value === id) && wornKeys.has(key));
+  const equip = [];
+  const unequip = [];
+  for ( const touched of involved.values() ) {
+    const shouldWear = worn(touched.id);
+    if ( shouldWear && !touched.equipped ) equip.push(touched.id);
+    else if ( !shouldWear && touched.equipped ) unequip.push(touched.id);
+  }
+
+  return { assignments: next, equip, unequip, placed, removed };
 }
 
 /**
@@ -258,7 +271,8 @@ export function planRemove(layout, key) {
   return {
     assignments: next,
     equip: [],
-    unequip: [target.item.id],
+    // A camp item was never equipped; taking it out of camp just unpacks it.
+    unequip: target.item.equipped ? [target.item.id] : [],
     placed: [],
     removed: [{ item: target.item, key }]
   };

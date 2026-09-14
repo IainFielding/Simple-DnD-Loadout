@@ -8,6 +8,7 @@
     "provision": "node provision.mjs",
     "test": "node run.mjs",
     "test:ember": "node run.mjs --world=paperdoll-ember",
+    "test:tidy": "node run.mjs --world=paperdoll-tidy",
     "hold": "node run.mjs --hold"
   },
   "devDependencies": {

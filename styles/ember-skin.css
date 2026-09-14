@@ -92,7 +92,8 @@
 
 /* Slots take a small corner rather than the token's 6px at trinket size, where the rounding would
    crop the icon and thin the rarity frame at the turn. */
-.sogrom-doll.sogrom-ember :is(.pd-trinkets, .pd-kit) .pd-slot { border-radius: 4px; }
+.sogrom-doll.sogrom-ember :is(.pd-trinkets, .pd-camp) .pd-slot { border-radius: 4px; }
+.sogrom-doll.sogrom-ember .pd-camp-title { font-family: var(--pd-font-body); letter-spacing: 0.04em; font-size: 11px; }
 .sogrom-doll.sogrom-ember .pd-slot-img { border-radius: inherit; }
 
 /* Attunement pips are parchment rings rather than brass diamonds, matching Ember's round crests.

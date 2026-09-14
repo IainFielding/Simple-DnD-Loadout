@@ -3,7 +3,7 @@ import { accepts, classify, kindFromIcon, kindFromName } from "../scripts/data/c
 import { NOT_SLOTTABLE, WEARABLES } from "./fixtures/dnd5e-600-wearables.mjs";
 import {
   amulet, boots, chainMail, cloak, dagger, greatsword, handCrossbow, iounStone, javelin, leather, longbow, longsword,
-  lute, make, potion, ring, shield, smithsTools, torch
+  lute, make, potion, ring, shield, smallclothes, smithsTools, softShoes, thievesTools, torch, travelersClothes
 } from "./helpers/items.mjs";
 
 describe("classify: real dnd5e 6.0.0 content", () => {
@@ -56,6 +56,12 @@ describe("classify: trust order", () => {
   it("ranged weapons go to the ranged slots by type", () => {
     expect(classify(longbow())).toEqual({ kind: "ranged", source: "type" });
     expect(classify(javelin())?.kind).toBe("mainHand");
+  });
+
+  it("every tool that is not an instrument goes to the tools slot: artisan's tools, gaming sets, kits", () => {
+    for ( const subtype of ["art", "game", ""] ) {
+      expect(classify(make({ name: "Kit", type: "tool", subtype }))).toEqual({ kind: "tools", source: "type" });
+    }
   });
 
   it("tools are decided by type, before the name or icon can mislead", () => {
@@ -206,6 +212,40 @@ describe("accepts", () => {
         expect(accepts(kind, torch()).ok).toBe(false);
         expect(accepts(kind, lute()).ok).toBe(false);
       }
+    });
+  });
+
+  describe("camp clothes", () => {
+    it("outfit and underwear take clothing and non-armour body wear", () => {
+      for ( const kind of ["campOutfit", "campUnderwear"] ) {
+        expect(accepts(kind, travelersClothes()).ok).toBe(true);
+        expect(accepts(kind, smallclothes()).ok).toBe(true);
+        expect(accepts(kind, make({ name: "Robe of Stars", subtype: "wondrous" })).ok).toBe(true);
+      }
+    });
+
+    it("footwear takes anything for the feet, magic or not", () => {
+      expect(accepts("campFootwear", softShoes()).ok).toBe(true);
+      expect(accepts("campFootwear", boots()).ok).toBe(true);
+      expect(accepts("campFootwear", travelersClothes()).ok).toBe(false);
+    });
+
+    it("never takes armour, shields, weapons, jewellery or kit", () => {
+      for ( const kind of ["campOutfit", "campUnderwear", "campFootwear"] ) {
+        for ( const item of [chainMail(), leather(), shield(), longsword(), ring(), amulet(), torch(), thievesTools()] ) {
+          expect(accepts(kind, item).ok).toBe(false);
+        }
+      }
+    });
+
+    it("are the same in strict mode, and see past a pinned battle slot", () => {
+      expect(accepts("campFootwear", softShoes(), { strict: true }).ok).toBe(true);
+      expect(accepts("campFootwear", boots({ slot: "trinket" })).ok).toBe(true);
+    });
+
+    it("camp clothes still fit their ordinary slots", () => {
+      expect(accepts("body", travelersClothes()).ok).toBe(true);
+      expect(accepts("feet", softShoes()).ok).toBe(true);
     });
   });
 

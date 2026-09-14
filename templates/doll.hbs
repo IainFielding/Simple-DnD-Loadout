@@ -43,17 +43,26 @@
       {{#each groups.hands}}{{> sogrom-pd-slot}}{{/each}}
     </div>
 
+    {{!-- Camp clothes: a bordered group in the stage's empty middle column, so turning it on moves
+          no other slot. Shown only when the GM enables camp clothes. --}}
+    {{#if groups.camp.length}}
+    <div class="pd-camp" role="group" aria-label="{{localize "sogrom-simple-dnd5e-paper-doll.slot.campGroup"}}"
+         data-tooltip="{{localize "sogrom-simple-dnd5e-paper-doll.slot.campHint"}}">
+      <span class="pd-camp-title" aria-hidden="true">
+        <i class="fa-solid fa-campground" inert></i> {{localize "sogrom-simple-dnd5e-paper-doll.slot.campGroup"}}
+      </span>
+      {{#each groups.camp}}{{> sogrom-pd-slot}}{{/each}}
+    </div>
+    {{/if}}
+
     <div class="pd-picker-host"></div>
   </div>
 
-  {{#if groups.kit.length}}
-  <div class="pd-kit" role="group">
+  {{!-- One bar: light, instrument and tools first, then the trinkets. Kit leads so its slots stay
+        where they are when the GM changes the trinket count. --}}
+  {{#if showBar}}
+  <div class="pd-trinkets" role="group" aria-label="{{localize "sogrom-simple-dnd5e-paper-doll.slot.barGroup"}}">
     {{#each groups.kit}}{{> sogrom-pd-slot}}{{/each}}
-  </div>
-  {{/if}}
-
-  {{#if groups.trinkets.length}}
-  <div class="pd-trinkets" role="group" aria-label="{{localize "sogrom-simple-dnd5e-paper-doll.slot.kind.trinket"}}">
     {{#each groups.trinkets}}{{> sogrom-pd-slot}}{{/each}}
   </div>
   {{/if}}

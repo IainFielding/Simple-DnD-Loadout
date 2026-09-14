@@ -63,8 +63,14 @@ try {
     failed += report(await session.inWorld("player.mjs", "all"), only);
   }
 
-  // A picture for eyes: the tab and the dock together, dressed. Nothing asserts on it.
-  await gm.inWorld("render.mjs", "showcase");
+  // A picture for eyes, dressed: the tab and the dock together — or, in the Tidy world, Tidy's sheet
+  // with the dock beside it. Nothing asserts on it beyond which sheet it shows.
+  const shown = await gm.inWorld("render.mjs", "showcase", { tidy: !!spec.tidy });
+  if ( spec.tidy && !/Tidy5e/.test(shown.sheetClass) ) {
+    failed++;
+    console.log(`
+  FAIL  the Tidy showcase opened ${shown.sheetClass}, not Tidy's sheet`);
+  }
   const shot = `showcase-${worldId}.png`;
   try {
     await gm.page.screenshot({ path: fileURLToPath(new URL(shot, import.meta.url)) });

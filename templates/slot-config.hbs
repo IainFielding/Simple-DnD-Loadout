@@ -26,6 +26,15 @@
   </div>
 
   <fieldset>
+    <legend>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.camp"}}</legend>
+    <label class="checkbox">
+      <input type="checkbox" name="camp" {{#if camp}}checked{{/if}}>
+      {{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.campEnable"}}
+    </label>
+    <p class="hint">{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.campHint"}}</p>
+  </fieldset>
+
+  <fieldset>
     <legend>{{localize "sogrom-simple-dnd5e-paper-doll.slotConfig.optional"}}</legend>
     <div class="pd-kind-grid">
       {{#each optional}}
